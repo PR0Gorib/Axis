@@ -1,6 +1,8 @@
-# ![Axis Logo](assets/logo.png) Axis
+# Axis
 
 **General-purpose comparison & ranking tool**
+
+![Main View](assets/Axis-main.png)
 
 Axis is an open-source desktop application built with HTML, CSS, JavaScript, and Tauri that lets you compare, rank, and organize virtually anything.
 
