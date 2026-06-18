@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Axis",
-  "version": "1.0.1",
-  "identifier": "com.ramim.axis.ctool",
+  "version": "1.0.0",
+  "identifier": "com.pr0gorib.axis",
   "build": {
     "frontendDist": "../src"
   },
