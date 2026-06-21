@@ -1201,10 +1201,12 @@ async function load() {
 }
 
 async function axisSave(itemsArr, catsArr) {
-  // First save of the session → snapshot state BEFORE any changes
+  // First save of the session → snapshot whatever's currently on disk
+  // BEFORE we overwrite it. Awaited so it can never race with saveData()
+  // writing new image files to the same paths.
   if (!_sessionBackupDone && AxisStorage.isTauri) {
     _sessionBackupDone = true;
-    AxisStorage.createBackup(itemsArr, catsArr).catch(() => {});
+    try { await AxisStorage.createBackup(); } catch(e) { console.error('[Axis] backup failed:', e); }
   }
   try {
     await AxisStorage.saveData(itemsArr, catsArr);
@@ -1272,29 +1274,31 @@ async function axisParseImport(file) {
 
     if (!data) throw new Error('No data.json found in ZIP');
 
-    // Resolve image refs: prefer writing to disk (Tauri) or fall back to base64
-    await Promise.all(data.items.map(async item => {
-      const ref = item.img;
+    // Resolve image refs (img / img2 / img3): prefer writing to disk (Tauri)
+    // or fall back to in-memory base64
+    async function resolveField(item, field) {
+      const ref = item[field];
       if (!ref || ref.startsWith('data:')) return;
       const imgData = imageMap[ref];
       if (!imgData) return;
 
+      let binary = '';
+      for (let i = 0; i < imgData.length; i++) binary += String.fromCharCode(imgData[i]);
+      const dataUrl = 'data:image/jpeg;base64,' + btoa(binary);
+
       if (AxisStorage.isTauri) {
-        // Let AxisStorage write it properly; use the saveImage helper with a
-        // pre-built data URL so it goes through the normal flow
-        let binary = '';
-        for (let i = 0; i < imgData.length; i++) binary += String.fromCharCode(imgData[i]);
-        const dataUrl = 'data:image/jpeg;base64,' + btoa(binary);
-        item.img = await AxisStorage.saveImage(dataUrl, item.id);
-        // Now load it back as base64 for in-memory rendering
-        item.img = await AxisStorage.loadImage(item.img) || dataUrl;
+        const filename = await AxisStorage.saveImage(dataUrl, item.id + '_' + (field === 'img' ? '1' : field === 'img2' ? '2' : '3'));
+        item[field] = await AxisStorage.loadImage(filename) || dataUrl;
       } else {
-        // Browser: just keep as base64 in memory
-        let binary = '';
-        for (let i = 0; i < imgData.length; i++) binary += String.fromCharCode(imgData[i]);
-        item.img = 'data:image/jpeg;base64,' + btoa(binary);
+        item[field] = dataUrl;
       }
-    }));
+    }
+
+    await Promise.all(data.items.map(item => Promise.all([
+      resolveField(item, 'img'),
+      resolveField(item, 'img2'),
+      resolveField(item, 'img3'),
+    ])));
 
     return data;
   } else {
@@ -1310,7 +1314,9 @@ async function axisParseImport(file) {
     if (!AxisStorage.isTauri) {
       items = items.map(item => ({
         ...item,
-        img: item.img?.startsWith('data:') ? item.img : ''
+        img:  item.img?.startsWith('data:')  ? item.img  : '',
+        img2: item.img2?.startsWith('data:') ? item.img2 : '',
+        img3: item.img3?.startsWith('data:') ? item.img3 : '',
       }));
     }
     return { items, categories };
@@ -1793,15 +1799,17 @@ function buildStatFields(existing, existingNotes) {
   const step = 0.5;
   const defaultVal = statMax === 100 ? 50 : 5;
   categories.forEach(cat => {
-    let val = existing[cat] !== undefined ? existing[cat] : defaultVal;
-    val = Math.min(Math.max(0, parseFloat(val) || 0), statMax);
+    const raw = existing[cat] !== undefined ? parseFloat(existing[cat]) : defaultVal;
+    const val = isNaN(raw) ? defaultVal : Math.max(0, raw);
+    // Slider max is the larger of statMax or val so existing /100 data displays correctly
+    const sliderMax = Math.max(statMax, val);
     const div = document.createElement('div');
     div.className = 'stat-field-row'; div.dataset.cat = cat;
     const existingNote = (existingNotes && existingNotes[cat]) ? existingNotes[cat] : '';
     div.innerHTML = `<div class="stat-field-name">${esc(cat)}</div>
       <div class="range-row">
-        <input type="range" min="0" max="${statMax}" step="${step}" value="${val}">
-        <input type="number" class="range-num" min="0" max="${statMax}" step="${step}" value="${val}">
+        <input type="range" min="0" max="${sliderMax}" step="${step}" value="${val}">
+        <input type="number" class="range-num" min="0" max="${sliderMax}" step="${step}" value="${val}">
       </div>
       <div class="stat-note-wrap">
         <input type="text" class="stat-note-input" placeholder="Note for ${esc(cat)}..." value="${esc(existingNote)}">
@@ -2549,6 +2557,7 @@ function toggleStatMax() {
     });
     buildStatFields(current);
   }
+  updateScoreFilterInputs();
   renderGrid(); renderOverall(); renderStatsBar();
   axisSaveSettings({ statMax });
   showToast(`Max stat set to ${statMax}`);
@@ -2692,67 +2701,109 @@ function loadImg3File(input) {
 }
 // ── SHARE AS IMAGE ─────────────────────────────────
 function shareItemAsImage(item) {
-  const W = 420, PAD = 24;
-  const IMG_H = 220;
-  // Calculate canvas height dynamically
-  const statCount = categories.length;
-  const H = IMG_H + 16 + 28 + 8 + (statCount * 28) + 40 + PAD;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = Math.max(H, 300);
-  const ctx = canvas.getContext('2d');
+  const W       = 460;
+  const PAD     = 22;
+  const IMG_H   = 200;
+  const ROW_H   = 38;   // label + bar + gap per stat
+  const visStats = categories.slice(0, 8);
+  const H = 4 + IMG_H + 20 + 26 + 14 + 18 + (visStats.length * ROW_H) + 32;
+  const canvas  = document.createElement('canvas');
+  canvas.width  = W;
+  canvas.height = Math.max(H, 300);
+  const ctx     = canvas.getContext('2d');
+
+  // Scale for device pixel ratio so output is crisp on HiDPI / Retina screens
+  const DPR  = window.devicePixelRatio || 1;
+  canvas.width  = W * DPR;
+  canvas.height = Math.max(H, 300) * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = Math.max(H, 300) + 'px';
+  ctx.scale(DPR, DPR);
+
+  // Use reliable system fonts — web fonts are not available on canvas
+  const FONT_LABEL  = '700 15px system-ui, -apple-system, Arial, sans-serif';
+  const FONT_NAME   = '700 24px system-ui, -apple-system, Arial, sans-serif';
+  const FONT_SCORE  = '600 14px system-ui, -apple-system, Arial, sans-serif';
+  const FONT_STAT   = '700 13px system-ui, -apple-system, Arial, sans-serif';
+  const FONT_FOOTER = '400 11px system-ui, -apple-system, Arial, sans-serif';
 
   const draw = () => {
-    // Background
+    // ── Background
     ctx.fillStyle = '#0d0d0f';
-    ctx.fillRect(0, 0, W, canvas.height);
+    ctx.fillRect(0, 0, W, canvas.height / DPR);
 
-    // Accent top border
+    // ── Accent top bar
     ctx.fillStyle = '#d94f5c';
-    ctx.fillRect(0, 0, W, 3);
+    ctx.fillRect(0, 0, W, 4);
+    let y = 4;
 
-    let y = 3;
-
-    // Image
-    const src = axisImgSrc(item.img);
     const doStats = () => {
-      // Name
       y += 16;
-      ctx.fillStyle = '#e8e8ec';
-      ctx.font = 'bold 20px "Barlow Condensed", sans-serif';
-      ctx.fillText(item.name.toUpperCase(), PAD, y + 20);
-      y += 32;
 
-      // Overall score
+      // ── Item name
+      ctx.fillStyle = '#ffffff';
+      ctx.font = FONT_NAME;
+      ctx.fillText(item.name.toUpperCase(), PAD, y + 18);
+      y += 26;
+
+      // ── Overall score
       const score = overallScore(item).toFixed(1);
       ctx.fillStyle = '#d94f5c';
-      ctx.font = 'bold 14px "Barlow Condensed", sans-serif';
-      ctx.fillText(`Overall: ${score}/${statMax}`, PAD, y);
-      y += 20;
+      ctx.font = FONT_SCORE;
+      ctx.fillText(`Overall  ${score} / ${statMax}`, PAD, y + 13);
+      y += 18;
 
-      // Stat bars
-      categories.slice(0, 8).forEach(k => {
+      // ── Divider
+      y += 8;
+      ctx.fillStyle = '#2a2a32';
+      ctx.fillRect(PAD, y, W - PAD * 2, 1);
+      y += 10;
+
+      // ── Stat rows
+      visStats.forEach(k => {
         const v   = item.stats?.[k] ?? 0;
         const pct = Math.min(v / statMax, 1);
-        ctx.fillStyle = '#2a2a32';
-        ctx.fillRect(PAD, y, W - PAD * 2, 10);
-        ctx.fillStyle = '#d94f5c';
-        ctx.fillRect(PAD, y, (W - PAD * 2) * pct, 10);
-        ctx.fillStyle = '#6b6b7a';
-        ctx.font = '11px "Barlow Condensed", sans-serif';
-        ctx.fillText(k.toUpperCase(), PAD, y - 4);
-        ctx.fillStyle = '#e8e8ec';
-        ctx.font = 'bold 11px "Barlow Condensed", sans-serif';
-        ctx.fillText(String(v), W - PAD - 20, y - 4);
-        y += 28;
+        const BAR_Y    = y + 18;
+        const BAR_W    = W - PAD * 2 - 36;
+        const BAR_H    = 8;
+
+        // Label (left)
+        ctx.fillStyle = '#c0c0d0';
+        ctx.font = FONT_STAT;
+        ctx.textAlign = 'left';
+        ctx.fillText(k.toUpperCase(), PAD, y + 13);
+
+        // Value (right)
+        ctx.fillStyle = '#ffffff';
+        ctx.font = FONT_LABEL;
+        ctx.textAlign = 'right';
+        ctx.fillText(String(v), W - PAD, y + 13);
+        ctx.textAlign = 'left';
+
+        // Bar track
+        ctx.fillStyle = '#252530';
+        ctx.beginPath();
+        ctx.roundRect(PAD, BAR_Y, BAR_W, BAR_H, 4);
+        ctx.fill();
+
+        // Bar fill
+        if (pct > 0) {
+          ctx.fillStyle = '#d94f5c';
+          ctx.beginPath();
+          ctx.roundRect(PAD, BAR_Y, BAR_W * pct, BAR_H, 4);
+          ctx.fill();
+        }
+
+        y += ROW_H;
       });
 
-      // Footer
-      y += 4;
-      ctx.fillStyle = '#3a3a48';
-      ctx.font = '10px "Barlow Condensed", sans-serif';
+      // ── Footer
+      ctx.fillStyle = '#3a3a50';
+      ctx.font = FONT_FOOTER;
+      ctx.textAlign = 'left';
       ctx.fillText('Made with Axis', PAD, canvas.height - 10);
 
-      // Download
+      // ── Download
       const a = document.createElement('a');
       a.download = `${item.name.replace(/[^a-z0-9]/gi,'_')}.png`;
       a.href = canvas.toDataURL('image/png');
@@ -2760,18 +2811,20 @@ function shareItemAsImage(item) {
       showToast('Image saved.');
     };
 
+    // ── Item image (or placeholder)
+    const src = axisImgSrc(item.img);
     if (src) {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
-        // cover-fit into IMG_H × W
+        // cover-fit
         const scale = Math.max(W / img.width, IMG_H / img.height);
         const dw = img.width * scale, dh = img.height * scale;
         ctx.drawImage(img, (W - dw) / 2, y, dw, dh);
         y += IMG_H;
         doStats();
       };
-      img.onerror = () => { y += 8; doStats(); };
+      img.onerror = () => { y += 4; doStats(); };
       img.src = src;
     } else {
       ctx.fillStyle = '#16161a';
@@ -2785,6 +2838,22 @@ function shareItemAsImage(item) {
       doStats();
     }
   };
+
+  // Polyfill roundRect for older webviews
+  if (!ctx.roundRect) {
+    ctx.roundRect = function(x, y, w, h, r) {
+      this.moveTo(x + r, y);
+      this.lineTo(x + w - r, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r);
+      this.lineTo(x + w, y + h - r);
+      this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      this.lineTo(x + r, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r);
+      this.lineTo(x, y + r);
+      this.quadraticCurveTo(x, y, x + r, y);
+      this.closePath();
+    };
+  }
 
   draw();
 }
@@ -2823,6 +2892,9 @@ document.addEventListener('keydown', e => {
     const btn = document.getElementById('stat-max-btn');
     if (btn) btn.textContent = 'Max Stat: 100';
   }
+  // Always sync score filter ceiling to statMax so nothing is hidden on load
+  scoreFilterMax = statMax;
+  updateScoreFilterInputs();
   if (settings.viewMode === 'list') {
     viewMode = 'list';
   }
