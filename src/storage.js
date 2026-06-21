@@ -10,10 +10,12 @@
  *   └── backups\           ZIP snapshots, auto-pruned to 10 most recent
  *
  * How images work:
- *   IN MEMORY  → item.img = "data:image/jpeg;base64,..."  (unchanged)
- *   ON DISK    → item.img = "img_abc123.jpg"              (filename only)
- *   On load    → filenames are expanded back to base64
+ *   IN MEMORY  → item.img / item.img2 / item.img3 = "data:image/jpeg;base64,..."
+ *   ON DISK    → item.img / item.img2 / item.img3 = "img_abc123_1.jpg" etc (filename only)
+ *   On load    → filenames are expanded back to base64 for all three fields
  *   On save    → base64 strings are written as files, replaced with names
+ *   Backups    → snapshot whatever is CURRENTLY on disk (read-only), so they
+ *                never race with saveData() writing new image files
  *
  * Requires (in capabilities/default.json):
  *   "fs:allow-read-file", "fs:allow-write-file",
@@ -153,10 +155,9 @@ const AxisStorage = (() => {
       // Shallow-copy items so we don't mutate the live array
       const serializable = await Promise.all(items.map(async item => {
         const copy = { ...item };
-        if (copy.img?.startsWith('data:')) {
-          // Write image to disk, replace with filename
-          copy.img = await saveImage(copy.img, copy.id);
-        }
+        if (copy.img?.startsWith('data:'))  copy.img  = await saveImage(copy.img,  copy.id + '_1');
+        if (copy.img2?.startsWith('data:')) copy.img2 = await saveImage(copy.img2, copy.id + '_2');
+        if (copy.img3?.startsWith('data:')) copy.img3 = await saveImage(copy.img3, copy.id + '_3');
         return copy;
       }));
       const json = JSON.stringify({ items: serializable, categories }, null, 2);
@@ -189,9 +190,9 @@ const AxisStorage = (() => {
       if (!await fs().exists(filePath)) return null;
       const d = JSON.parse(await fs().readTextFile(filePath));
       const items = await Promise.all((d.items || []).map(async item => {
-        if (item.img && !item.img.startsWith('data:')) {
-          item.img = await loadImage(item.img) || item.img;
-        }
+        if (item.img  && !item.img.startsWith('data:'))  item.img  = await loadImage(item.img)  || item.img;
+        if (item.img2 && !item.img2.startsWith('data:')) item.img2 = await loadImage(item.img2) || item.img2;
+        if (item.img3 && !item.img3.startsWith('data:')) item.img3 = await loadImage(item.img3) || item.img3;
         return item;
       }));
       return { items, categories: d.categories || [] };
@@ -254,37 +255,36 @@ const AxisStorage = (() => {
    * Saved to backups\ as YYYY-MM-DD_HH-MM-SS.zip.
    * Auto-prunes to MAX_BACKUPS most recent.
    */
-  async function createBackup(items, categories) {
+  /**
+   * Create a ZIP backup of whatever is CURRENTLY on disk
+   * (the existing data.json + every file in images\).
+   * This intentionally does NOT take items/categories as input —
+   * it snapshots disk state directly, so it can run concurrently
+   * with saveData() without racing to write the same image files.
+   * Saved to backups\ as YYYY-MM-DD_HH-MM-SS.zip.
+   * Auto-prunes to MAX_BACKUPS most recent.
+   * Returns false (no-op) if there's nothing on disk yet to back up.
+   */
+  async function createBackup() {
     if (!isTauri()) return false;
     try {
+      const dataPath = await join(_dataDir, 'data.json');
+      if (!await fs().exists(dataPath)) return false; // nothing to back up yet
+
       const entries = [];
+      entries.push({ name: 'data.json', data: await fs().readFile(dataPath) });
 
-      // Serialise data with filename refs (same as saveData)
-      const serializable = await Promise.all(items.map(async item => {
-        const copy = { ...item };
-        if (copy.img?.startsWith('data:')) {
-          copy.img = await saveImage(copy.img, copy.id);
+      // Bundle every file currently in images\
+      try {
+        const imgEntries = await fs().readDir(_imagesDir);
+        for (const e of imgEntries) {
+          if (!e.name) continue;
+          try {
+            const bytes = await fs().readFile(await join(_imagesDir, e.name));
+            entries.push({ name: `images/${e.name}`, data: bytes });
+          } catch(_) { /* skip unreadable file */ }
         }
-        return copy;
-      }));
-      entries.push({
-        name: 'data.json',
-        data: new TextEncoder().encode(JSON.stringify({ items: serializable, categories }, null, 2))
-      });
-
-      // Include every referenced image file
-      const referenced = new Set(
-        serializable.map(i => i.img).filter(img => img && !img.startsWith('data:'))
-      );
-      for (const filename of referenced) {
-        try {
-          const filePath = await join(_imagesDir, filename);
-          if (await fs().exists(filePath)) {
-            const bytes = await fs().readFile(filePath);
-            entries.push({ name: `images/${filename}`, data: bytes });
-          }
-        } catch(e) { /* skip missing image */ }
-      }
+      } catch(_) { /* images dir empty or unreadable — backup data.json alone */ }
 
       const zipBytes  = buildZip(entries);
       const timestamp = new Date().toISOString()
@@ -451,26 +451,33 @@ const AxisStorage = (() => {
         data: new TextEncoder().encode(JSON.stringify({ items, categories }, null, 2))
       });
 
-      // Include images
-      for (const item of items) {
-        if (!item.img) continue;
-        if (item.img.startsWith('data:')) {
+      // Bundle one image field (img / img2 / img3) for one item
+      async function bundleImg(item, field, suffix) {
+        const val = item[field];
+        if (!val) return;
+        if (val.startsWith('data:')) {
           // In-memory base64 — encode directly into ZIP
-          const b64    = item.img.split(',')[1];
+          const b64    = val.split(',')[1];
           const binary = atob(b64);
           const bytes  = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          entries.push({ name: `images/img_${item.id}.jpg`, data: bytes });
+          entries.push({ name: `images/img_${item.id}_${suffix}.jpg`, data: bytes });
         } else if (isTauri()) {
-          // File on disk — read and bundle
+          // Filename ref — read from disk and bundle
           try {
-            const filePath = await join(_imagesDir, item.img);
+            const filePath = await join(_imagesDir, val);
             if (await fs().exists(filePath)) {
               const bytes = await fs().readFile(filePath);
-              entries.push({ name: `images/${item.img}`, data: bytes });
+              entries.push({ name: `images/${val}`, data: bytes });
             }
           } catch(e) { /* skip missing */ }
         }
+      }
+
+      for (const item of items) {
+        await bundleImg(item, 'img',  1);
+        await bundleImg(item, 'img2', 2);
+        await bundleImg(item, 'img3', 3);
       }
 
       const zipBytes = buildZip(entries);
