@@ -1,7 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Axis",
+<<<<<<< HEAD
   "version": "1.1.0",
+=======
+  "version": "1.0.0",
+>>>>>>> e4cb4146386dc77cd2ee4a10d3b4e9e6578ac620
   "identifier": "com.pr0gorib.axis",
   "build": {
     "frontendDist": "../src"
