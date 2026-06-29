@@ -10,8 +10,8 @@
  *   └── backups\           ZIP snapshots, auto-pruned to 10 most recent
  *
  * How images work:
- *   IN MEMORY  → item.img / item.img2 / item.img3 = "data:image/jpeg;base64,..."
- *   ON DISK    → item.img / item.img2 / item.img3 = "img_abc123_1.jpg" etc (filename only)
+ *   IN MEMORY  → item.img / item.img2 / item.img3 / item.img4 / item.img5 = "data:image/jpeg;base64,..."
+ *   ON DISK    → img fields stored as "img_id_1.jpg" ... "img_id_5.jpg" (filename only)
  *   On load    → filenames are expanded back to base64 for all three fields
  *   On save    → base64 strings are written as files, replaced with names
  *   Backups    → snapshot whatever is CURRENTLY on disk (read-only), so they
@@ -158,6 +158,10 @@ const AxisStorage = (() => {
         if (copy.img?.startsWith('data:'))  copy.img  = await saveImage(copy.img,  copy.id + '_1');
         if (copy.img2?.startsWith('data:')) copy.img2 = await saveImage(copy.img2, copy.id + '_2');
         if (copy.img3?.startsWith('data:')) copy.img3 = await saveImage(copy.img3, copy.id + '_3');
+        if (copy.img4?.startsWith('data:')) copy.img4 = await saveImage(copy.img4, copy.id + '_4');
+        if (copy.img5?.startsWith('data:')) copy.img5 = await saveImage(copy.img5, copy.id + '_5');
+        if (copy.img4?.startsWith('data:')) copy.img4 = await saveImage(copy.img4, copy.id + '_4');
+        if (copy.img5?.startsWith('data:')) copy.img5 = await saveImage(copy.img5, copy.id + '_5');
         return copy;
       }));
       const json = JSON.stringify({ items: serializable, categories }, null, 2);
@@ -193,6 +197,10 @@ const AxisStorage = (() => {
         if (item.img  && !item.img.startsWith('data:'))  item.img  = await loadImage(item.img)  || item.img;
         if (item.img2 && !item.img2.startsWith('data:')) item.img2 = await loadImage(item.img2) || item.img2;
         if (item.img3 && !item.img3.startsWith('data:')) item.img3 = await loadImage(item.img3) || item.img3;
+        if (item.img4 && !item.img4.startsWith('data:')) item.img4 = await loadImage(item.img4) || item.img4;
+        if (item.img5 && !item.img5.startsWith('data:')) item.img5 = await loadImage(item.img5) || item.img5;
+        if (item.img4 && !item.img4.startsWith('data:')) item.img4 = await loadImage(item.img4) || item.img4;
+        if (item.img5 && !item.img5.startsWith('data:')) item.img5 = await loadImage(item.img5) || item.img5;
         return item;
       }));
       return { items, categories: d.categories || [] };
@@ -478,6 +486,8 @@ const AxisStorage = (() => {
         await bundleImg(item, 'img',  1);
         await bundleImg(item, 'img2', 2);
         await bundleImg(item, 'img3', 3);
+        await bundleImg(item, 'img4', 4);
+        await bundleImg(item, 'img5', 5);
       }
 
       const zipBytes = buildZip(entries);

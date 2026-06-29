@@ -3700,20 +3700,15 @@
           <input type="text" id="f-name" placeholder="e.g. Item name">
         </div>
         <div class="field">
-          <label>Images <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">— up to
-              3, first is primary</span></label>
+          <label>Images <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">— up to 5, first is primary</span></label>
           <div id="img-add-row">
             <input type="url" id="f-img-url-input" placeholder="Paste image URL...">
             <button type="button" class="btn small" onclick="addImageFromUrlInput()">Add URL</button>
-            <label class="btn small" id="img-upload-label">
-              Upload
-              <input type="file" id="f-img-file-input" accept="image/png,image/jpeg,image/webp"
-                onchange="addImageFromFileInput(this)" style="display:none;">
-            </label>
+            <input type="file" id="f-img-file-input" accept="image/png,image/jpeg,image/webp"
+              onchange="addImageFromFileInput(this)" style="display:none;">
           </div>
           <div id="img-thumb-strip"></div>
-          <div class="field-hint">Drag handles aren't needed — use the ‹ › arrows on each thumbnail to reorder. The
-            leftmost image is always primary and is the one shown in comparisons and shared images.</div>
+          <div class="field-hint">Use the ‹ › arrows on each thumbnail to reorder. The leftmost image is primary.</div>
         </div>
         <div class="field">
           <label>Bio / Notes</label>
@@ -3978,7 +3973,7 @@
           const dataUrl = 'data:image/jpeg;base64,' + btoa(binary);
 
           if (AxisStorage.isTauri) {
-            const filename = await AxisStorage.saveImage(dataUrl, item.id + '_' + (field === 'img' ? '1' : field === 'img2' ? '2' : '3'));
+            const filename = await AxisStorage.saveImage(dataUrl, item.id + '_' + (field === 'img' ? '1' : field === 'img2' ? '2' : field === 'img3' ? '3' : field === 'img4' ? '4' : '5'));
             item[field] = await AxisStorage.loadImage(filename) || dataUrl;
           } else {
             item[field] = dataUrl;
@@ -3989,6 +3984,8 @@
           resolveField(item, 'img'),
           resolveField(item, 'img2'),
           resolveField(item, 'img3'),
+          resolveField(item, 'img4'),
+          resolveField(item, 'img5'),
         ])));
 
         return data;
@@ -4431,7 +4428,7 @@
       } else { dateEl.textContent = ''; }
 
       // Build image carousel
-      _panelImgs = [item.img, item.img2, item.img3].map(axisImgSrc).filter(Boolean);
+      _panelImgs = [item.img, item.img2, item.img3, item.img4, item.img5].map(axisImgSrc).filter(Boolean);
       _panelImgIdx = 0;
       _renderPanelCarousel();
 
@@ -4558,7 +4555,7 @@
       const item = items.find(x => x.id === id);
       if (!item) return;
       editingId = id;
-      pendingImages = [item.img, item.img2, item.img3].filter(Boolean);
+      pendingImages = [item.img, item.img2, item.img3, item.img4, item.img5].filter(Boolean);
 
       document.getElementById('modal-title').textContent = 'Edit Item';
       document.getElementById('f-name').value = item.name;
@@ -4625,9 +4622,11 @@
       const name = document.getElementById('f-name').value.trim();
       if (!name) { showToast('Name is required.', true); return; }
 
-      const img = pendingImages[0] || '';
+      const img  = pendingImages[0] || '';
       const img2 = pendingImages[1] || '';
       const img3 = pendingImages[2] || '';
+      const img4 = pendingImages[3] || '';
+      const img5 = pendingImages[4] || '';
       const bio = document.getElementById('f-bio').value.trim();
 
       const stats = {};
@@ -4650,9 +4649,9 @@
       const tags = [...pendingTags];
       if (editingId) {
         const item = items.find(x => x.id === editingId);
-        if (item) Object.assign(item, { name, img, img2, img3, bio, stats, tags, statNotes });
+        if (item) Object.assign(item, { name, img, img2, img3, img4, img5, bio, stats, tags, statNotes });
       } else {
-        items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, img, img2, img3, bio, stats, tags, statNotes, createdAt: Date.now() });
+        items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, img, img2, img3, img4, img5, bio, stats, tags, statNotes, createdAt: Date.now() });
       }
 
       save(); closeModal(); render();
@@ -4692,7 +4691,7 @@
       pendingImages.forEach((src, i) => {
         const thumb = document.createElement('div');
         thumb.className = 'img-thumb' + (i === 0 ? ' is-primary' : '');
-        const badgeText = i === 0 ? 'Primary' : i === 1 ? '2nd' : '3rd';
+        const badgeText = ['Primary','2nd','3rd','4th','5th'][i] || String(i+1);
         thumb.innerHTML = `
       <img src="${esc(src)}" alt="">
       <span class="img-thumb-badge">${badgeText}</span>
@@ -4703,25 +4702,24 @@
       </div>`;
         strip.appendChild(thumb);
       });
-      // Show an empty placeholder slot if under the 3-image limit
-      if (pendingImages.length < 3) {
+      const atLimit = pendingImages.length >= 5;
+      if (!atLimit) {
         const empty = document.createElement('div');
         empty.className = 'img-thumb-empty';
         empty.textContent = '+';
+        empty.title = 'Upload image';
+        empty.style.cursor = 'pointer';
+        empty.onclick = () => { document.getElementById('f-img-file-input').click(); };
         strip.appendChild(empty);
       }
-      // Disable add controls once at the limit
-      const atLimit = pendingImages.length >= 3;
       const urlInput = document.getElementById('f-img-url-input');
       const fileInput = document.getElementById('f-img-file-input');
-      const uploadLabel = document.getElementById('img-upload-label');
       if (urlInput) urlInput.disabled = atLimit;
       if (fileInput) fileInput.disabled = atLimit;
-      if (uploadLabel) uploadLabel.style.opacity = atLimit ? '.4' : '1';
     }
 
     function addImageFromUrlInput() {
-      if (pendingImages.length >= 3) { showToast('Maximum 3 images per item.', true); return; }
+      if (pendingImages.length >= 5) { showToast('Maximum 5 images per item.', true); return; }
       const input = document.getElementById('f-img-url-input');
       const url = input.value.trim();
       if (!url) return;
@@ -4731,7 +4729,7 @@
     }
 
     function addImageFromFileInput(input) {
-      if (pendingImages.length >= 3) { showToast('Maximum 3 images per item.', true); return; }
+      if (pendingImages.length >= 5) { showToast('Maximum 5 images per item.', true); return; }
       const file = input.files[0];
       if (!file) return;
       compressImage(file, 800, 0.82).then(compressed => {
@@ -5208,6 +5206,8 @@
         if (item.img?.startsWith('data:')) bytes += item.img.length * 0.75;
         if (item.img2?.startsWith('data:')) bytes += item.img2.length * 0.75;
         if (item.img3?.startsWith('data:')) bytes += item.img3.length * 0.75;
+        if (item.img4?.startsWith('data:')) bytes += item.img4.length * 0.75;
+        if (item.img5?.startsWith('data:')) bytes += item.img5.length * 0.75;
         return sum + Math.round(bytes / 1024);
       }, 0);
       const storageStr = totalStorage > 1024
@@ -5597,123 +5597,167 @@
 
     // ── SHARE AS IMAGE ─────────────────────────────────
     function shareItemAsImage(item) {
-      const W = 480;
-      const PAD = 24;
-      const ROW_H = 42;   // label + bar per stat, generous spacing
+      const W       = 480;
+      const PAD     = 22;
+      const MAX_H   = 680;   // cap for very tall portraits
+      const MIN_H   = 380;   // floor for very wide landscapes
+
       const visStats = categories.slice(0, 8);
+      const N        = visStats.length;
 
-      // Image area height adapts to the image's real aspect ratio so the whole
-      // image is always visible (contain-fit, never cropped) — clamped to a
-      // sane range so extreme panoramas/portraits don't break the layout.
-      const MIN_IMG_H = 140;
-      const MAX_IMG_H = 360;
-      const DEFAULT_IMG_H = 220; // used only when there's no image at all
+      // How much vertical space the stats block needs
+      const STAT_ROW_H = N > 0 ? Math.min(34, Math.max(24, Math.floor(180 / N))) : 30;
+      const STATS_BLOCK = N * STAT_ROW_H + 90; // +90 for name/score/divider/footer
 
-      const HEADER_H = 90;   // name + score + divider block
-      const FOOTER_H = 40;
-      const STATS_H = visStats.length * ROW_H;
+      // Fixed palette — always dark so the output looks sharp regardless of theme
+      const C_BG     = '#09090d';
+      const C_ACCENT = '#d94f5c';
+      const C_WHITE  = '#ffffff';
+      const C_LABEL  = 'rgba(255,255,255,0.54)';
+      const C_TRACK  = 'rgba(255,255,255,0.12)';
+      const C_DIV    = 'rgba(255,255,255,0.14)';
+      const C_DIM    = 'rgba(255,255,255,0.22)';
 
-      // System fonts only — web fonts aren't guaranteed available on <canvas>.
-      const FONT_NAME = '800 28px system-ui, -apple-system, Arial, sans-serif';
-      const FONT_SCORE = '700 16px system-ui, -apple-system, Arial, sans-serif';
-      const FONT_LABEL = '700 15px system-ui, -apple-system, Arial, sans-serif';
-      const FONT_VALUE = '800 16px system-ui, -apple-system, Arial, sans-serif';
-      const FONT_FOOTER = '600 12px system-ui, -apple-system, Arial, sans-serif';
+      function build(imgEl) {
+        // ── 1. Compute canvas height ─────────────────────────────────────────
+        let H;
+        if (imgEl) {
+          // Natural fit height at W-wide
+          const naturalH = Math.round(W * imgEl.naturalHeight / imgEl.naturalWidth);
+          H = Math.min(MAX_H, Math.max(MIN_H, naturalH));
+        } else {
+          H = 520;
+        }
 
-      // High-contrast palette — fixed regardless of the app's current theme so
-      // the shared image always looks the same.
-      const COL_BG = '#0a0a0d';
-      const COL_ACCENT = '#ff5f73';
-      const COL_TEXT = '#ffffff';
-      const COL_LABEL = '#e2e2ec';
-      const COL_TRACK = '#26262f';
-      const COL_DIV = '#34343f';
-      const COL_FOOTER = '#9a9aad';
-
-      function buildAndDraw(imgEl, imgAreaH) {
-        const H = imgAreaH + HEADER_H + STATS_H + FOOTER_H;
-        const cssW = W;
-        const cssH = Math.max(H, 320);
-
+        // Canvas setup
         const canvas = document.createElement('canvas');
         const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
-        canvas.width = Math.round(cssW * DPR);
-        canvas.height = Math.round(cssH * DPR);
-        canvas.style.width = cssW + 'px';
-        canvas.style.height = cssH + 'px';
+        canvas.width  = W * DPR;
+        canvas.height = H * DPR;
         const ctx = canvas.getContext('2d');
         ctx.scale(DPR, DPR);
 
-        function rect(x, y, w, h, color) {
-          ctx.fillStyle = color;
-          ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+        // ── Helpers ──────────────────────────────────────────────────────────
+        function box(x, y, w, h, c) {
+          ctx.fillStyle = c;
+          ctx.fillRect(~~x, ~~y, ~~Math.max(1, w), ~~Math.max(1, h));
         }
-        function text(str, x, y, font, color, align) {
-          ctx.font = font;
-          ctx.fillStyle = color;
-          ctx.textAlign = align || 'left';
-          ctx.textBaseline = 'alphabetic';
-          ctx.fillText(str, Math.round(x), Math.round(y));
+        function txt(s, x, y, font, c, align, maxW) {
+          ctx.save();
+          ctx.font = font; ctx.fillStyle = c;
+          ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+          if (maxW) ctx.fillText(s, ~~x, ~~y, maxW);
+          else      ctx.fillText(s, ~~x, ~~y);
+          ctx.restore();
+        }
+        function measure(s, font) {
+          ctx.save(); ctx.font = font;
+          const w = ctx.measureText(s).width;
+          ctx.restore(); return w;
+        }
+        function trunc(s, maxPx, font) {
+          if (measure(s, font) <= maxPx) return s;
+          while (s.length > 1 && measure(s + '…', font) > maxPx) s = s.slice(0, -1);
+          return s + '…';
         }
 
-        // Background fill first, full canvas
-        rect(0, 0, cssW, cssH, COL_BG);
+        // ── 2. Background ────────────────────────────────────────────────────
+        box(0, 0, W, H, C_BG);
 
-        // ── Image area — contain-fit, never cropped
+        // ── 3. Image — cover-fit so it fills the entire canvas with no gaps ──
+        // Minor crop on one axis is acceptable so there's zero dark letterboxing.
+        // The gradient overlay will obscure the very bottom ~40%, so any tiny crop
+        // there is invisible to the viewer.
         if (imgEl) {
-          // Letterbox/pillarbox background for the image slot
-          rect(0, 0, cssW, imgAreaH, '#16161a');
-          const imgAspect = imgEl.width / imgEl.height;
-          const boxAspect = cssW / imgAreaH;
-          let dw, dh;
-          if (imgAspect > boxAspect) {
-            // Image relatively wider than the box → fit to width
-            dw = cssW;
-            dh = cssW / imgAspect;
-          } else {
-            // Image relatively taller than the box → fit to height
-            dh = imgAreaH;
-            dw = imgAreaH * imgAspect;
-          }
-          const dx = (cssW - dw) / 2;
-          const dy = (imgAreaH - dh) / 2;
-          ctx.drawImage(imgEl, dx, dy, dw, dh);
+          const scale = Math.max(W / imgEl.naturalWidth, H / imgEl.naturalHeight);
+          const dw = imgEl.naturalWidth  * scale;
+          const dh = imgEl.naturalHeight * scale;
+          // Center the image both axes so the mid-section is always visible
+          ctx.drawImage(imgEl, (W - dw) / 2, (H - dh) / 2, dw, dh);
         } else {
-          rect(0, 0, cssW, imgAreaH, '#16161a');
-          text('◈', cssW / 2, imgAreaH / 2 + 18, '52px system-ui, sans-serif', COL_TRACK, 'center');
+          // Placeholder for items without an image
+          box(0, 0, W, H, '#12121a');
+          ctx.save();
+          ctx.font = '72px system-ui,sans-serif';
+          ctx.fillStyle = '#232330';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('◈', W / 2, H * 0.38);
+          ctx.restore();
         }
 
-        // ── Header block
-        let y = imgAreaH;
-        rect(0, y, cssW, HEADER_H, COL_BG);
-        text(item.name.toUpperCase(), PAD, y + 36, FONT_NAME, COL_TEXT, 'left');
-        const score = overallScore(item).toFixed(1);
-        text(`OVERALL  ${score} / ${statMax}`, PAD, y + 62, FONT_SCORE, COL_ACCENT, 'left');
-        rect(PAD, y + 76, cssW - PAD * 2, 2, COL_DIV);
-        y += HEADER_H;
+        // ── 4. Gradient overlay — bottom ~55% of the canvas ─────────────────
+        // Starts transparent, densifies towards the bottom so the image colour
+        // bleeds naturally into the text area.
+        const gradTop  = H * 0.30;  // gradient begins 30% from top
+        const grad = ctx.createLinearGradient(0, gradTop, 0, H);
+        grad.addColorStop(0,    'rgba(0,0,0,0)');
+        grad.addColorStop(0.22, 'rgba(6,6,12,0.35)');
+        grad.addColorStop(0.52, 'rgba(6,6,12,0.78)');
+        grad.addColorStop(0.78, 'rgba(6,6,12,0.93)');
+        grad.addColorStop(1,    'rgba(6,6,12,0.98)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, gradTop, W, H - gradTop);
 
-        // ── Stat rows
-        visStats.forEach(k => {
-          const v = item.stats?.[k] ?? 0;
+        // ── 5. Compute text block starting position ──────────────────────────
+        // Bottom-anchored: work from footer upwards so nothing ever clips.
+        const FOOTER_Y   = H - 10;
+        const STAT_END_Y = FOOTER_Y - 16;
+        const STAT_START = STAT_END_Y - N * STAT_ROW_H;
+        const DIV_Y      = STAT_START - 10;
+        const SCORE_Y    = DIV_Y - 12;
+        const NAME_Y     = SCORE_Y - 26;
+
+        // ── 6. Item name ─────────────────────────────────────────────────────
+        const nameSize   = NAME_Y > H * 0.48 ? 28 : 24; // shrink if tight
+        const nameFont   = `800 ${nameSize}px system-ui,-apple-system,Arial,sans-serif`;
+        const nameMaxW   = W - PAD * 2 - 80; // leave room for score badge
+        txt(trunc(item.name, nameMaxW, nameFont), PAD, NAME_Y, nameFont, C_WHITE);
+
+        // ── 7. Overall score — sits on the name baseline, right-aligned ──────
+        const score     = overallScore(item).toFixed(1);
+        const scoreStr  = `${score}/${statMax}`;
+        const scoreFont = '700 13px system-ui,Arial,sans-serif';
+        txt(scoreStr, W - PAD, NAME_Y, scoreFont, C_ACCENT, 'right');
+
+        // ── 8. Thin divider ───────────────────────────────────────────────────
+        box(PAD, DIV_Y, W - PAD * 2, 1, C_DIV);
+
+        // ── 9. Stat rows — label · bar · value ───────────────────────────────
+        const barW      = W - PAD * 2;
+        const BAR_H     = STAT_ROW_H > 28 ? 4 : 3;
+        const labelFont = `600 ${STAT_ROW_H > 28 ? 11 : 10}px system-ui,Arial,sans-serif`;
+        const valFont   = `700 ${STAT_ROW_H > 28 ? 12 : 11}px system-ui,Arial,sans-serif`;
+
+        visStats.forEach((k, i) => {
+          const v   = item.stats?.[k] ?? 0;
           const pct = statMax > 0 ? Math.min(v / statMax, 1) : 0;
+          const ry  = STAT_START + i * STAT_ROW_H;
 
-          text(k.toUpperCase(), PAD, y + 16, FONT_LABEL, COL_LABEL, 'left');
-          text(String(v), cssW - PAD, y + 16, FONT_VALUE, COL_TEXT, 'right');
+          // Label
+          const label   = trunc(k.toUpperCase(), barW - 40, labelFont);
+          const textBaseline = ry + STAT_ROW_H * 0.45;
+          txt(label, PAD, textBaseline, labelFont, C_LABEL, 'left');
 
-          const barY = y + 24;
-          const barW = cssW - PAD * 2;
-          const barH = 10;
-          rect(PAD, barY, barW, barH, COL_TRACK);
-          if (pct > 0) rect(PAD, barY, Math.max(barW * pct, barH), barH, COL_ACCENT);
+          // Value
+          txt(String(v), W - PAD, textBaseline, valFont, C_WHITE, 'right');
 
-          y += ROW_H;
+          // Bar — sits below the text, tight spacing
+          const barY = ry + STAT_ROW_H * 0.68;
+          box(PAD, barY, barW, BAR_H, C_TRACK);
+          if (pct > 0) {
+            box(PAD, barY, Math.max(barW * pct, BAR_H * 2), BAR_H, C_ACCENT);
+          }
         });
 
-        // ── Footer
-        rect(0, cssH - FOOTER_H, cssW, FOOTER_H, COL_BG);
-        text('Made with Axis', PAD, cssH - 16, FONT_FOOTER, COL_FOOTER, 'left');
+        // ── 10. Footer watermark ─────────────────────────────────────────────
+        txt('Made with ◈ Axis', W - PAD, FOOTER_Y,
+            '500 10px system-ui,Arial,sans-serif', C_DIM, 'right');
 
-        // ── Download
+        // ── 11. Top-left corner mark ──────────────────────────────────────────
+        txt('◈ AXIS', PAD, 18,
+            '600 9px system-ui,Arial,sans-serif', C_DIM, 'left');
+
+        // ── 12. Download ─────────────────────────────────────────────────────
         const a = document.createElement('a');
         a.download = `${item.name.replace(/[^a-z0-9]/gi, '_')}.png`;
         a.href = canvas.toDataURL('image/png');
@@ -5721,23 +5765,16 @@
         showToast('Image saved.');
       }
 
-      // Item image (primary only) or placeholder
+      // Load primary image then build
       const src = axisImgSrc(item.img);
       if (src) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          // Adaptive image area height: full-width-fit height, clamped to a
-          // sane range, so the WHOLE image is always visible regardless of
-          // its resolution or aspect ratio.
-          const naturalFitH = W / (img.width / img.height);
-          const imgAreaH = Math.min(MAX_IMG_H, Math.max(MIN_IMG_H, naturalFitH));
-          buildAndDraw(img, imgAreaH);
-        };
-        img.onerror = () => buildAndDraw(null, DEFAULT_IMG_H);
+        img.onload  = () => build(img);
+        img.onerror = () => build(null);
         img.src = src;
       } else {
-        buildAndDraw(null, DEFAULT_IMG_H);
+        build(null);
       }
     }
 
