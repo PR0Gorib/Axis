@@ -2090,7 +2090,7 @@
       opacity: .5;
     }
 
-    /* ── INCOGNITO ── */
+    /* ── INCOGNITO HEADER BADGE ── */
     #incognito-badge {
       display: none;
       align-items: center;
@@ -2098,26 +2098,40 @@
       font-family: 'Barlow Condensed', sans-serif;
       font-size: .72rem;
       font-weight: 700;
-      letter-spacing: .08em;
+      letter-spacing: .07em;
       text-transform: uppercase;
       color: var(--accent2);
-      border: 1px solid rgba(74, 232, 201, .3);
-      padding: 4px 10px;
-      border-radius: 2px;
-      background: rgba(74, 232, 201, .06);
+      border: 1px solid rgba(74, 232, 201, .35);
+      padding: 5px 10px;
+      border-radius: 3px;
+      background: rgba(74, 232, 201, .08);
       flex-shrink: 0;
+      white-space: nowrap;
+      animation: incognito-pulse 2.4s ease-in-out infinite;
     }
 
     #incognito-badge.visible {
       display: flex;
     }
 
+    @keyframes incognito-pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: .72; }
+    }
+
     body.incognito header {
-      border-bottom-color: rgba(74, 232, 201, .25);
+      border-bottom-color: rgba(74, 232, 201, .3);
+      box-shadow: 0 1px 0 rgba(74, 232, 201, .15);
     }
 
     body.incognito #site-footer::before {
       content: '👻 Incognito — data will not be saved  ·  ';
+    }
+
+    body.light #incognito-badge {
+      color: var(--accent2);
+      border-color: rgba(26, 158, 136, .35);
+      background: rgba(26, 158, 136, .08);
     }
 
 
@@ -3313,26 +3327,79 @@
       background: rgba(217, 79, 92, .1);
     }
 
-    /* incognito badge inside drawer */
-    #ham-incognito-badge {
-      display: none;
-      margin: 0 18px 10px;
+    /* incognito toggle row inside drawer */
+    .ham-toggle-row {
+      display: flex;
       align-items: center;
-      gap: 6px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: .72rem;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--accent2);
-      border: 1px solid rgba(74, 232, 201, .3);
-      padding: 5px 10px;
-      border-radius: 2px;
-      background: rgba(74, 232, 201, .06);
+      justify-content: space-between;
+      width: 100%;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 10px 18px;
+      font-family: inherit;
     }
 
-    #ham-incognito-badge.visible {
+    .ham-toggle-label {
       display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .9rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .ham-toggle-label .ham-icon {
+      font-size: 1rem;
+      line-height: 1;
+      width: 20px;
+      text-align: center;
+    }
+
+    .ham-switch {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      border-radius: 10px;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background .18s ease;
+    }
+
+    .ham-switch-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--surface);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+      transition: transform .18s ease, background .18s ease;
+    }
+
+    .ham-switch.on {
+      background: rgba(74, 232, 201, .35);
+    }
+
+    .ham-switch.on .ham-switch-knob {
+      transform: translateX(18px);
+      background: var(--accent2);
+    }
+
+    .ham-toggle-row:hover .ham-toggle-label {
+      color: var(--accent2);
+    }
+
+    .ham-hint {
+      margin: -2px 18px 8px;
+      font-family: 'Barlow', sans-serif;
+      font-size: .7rem;
+      line-height: 1.4;
+      color: var(--muted);
     }
 
     body.light #ham-drawer {
@@ -3552,6 +3619,7 @@
       <h1>◈ Axis</h1>
       <span class="tagline">General purpose comparison &amp; ranking tool</span>
     </div>
+    <div id="incognito-badge">👻 Incognito — data will not be saved</div>
     <div class="header-search">
       <span class="hs-icon">🔎</span>
       <input type="text" id="search-input" placeholder="Search items..." oninput="onSearch(this.value)"
@@ -3598,10 +3666,13 @@
       <button class="ham-btn" onclick="bulkImportTrigger();closeHamMenu()">
         <span class="ham-icon">⊕</span> Add Images
       </button>
-      <button class="ham-btn accent2" id="ham-incognito-btn" onclick="toggleIncognito()" title="Toggle incognito mode">
-        <span class="ham-icon">👻</span> <span id="ham-incognito-label">Incognito Off</span>
+      <button class="ham-toggle-row" id="ham-incognito-btn" onclick="toggleIncognito()" title="Toggle incognito mode">
+        <span class="ham-toggle-label"><span class="ham-icon">👻</span> Incognito</span>
+        <span class="ham-switch" id="ham-switch">
+          <span class="ham-switch-knob"></span>
+        </span>
       </button>
-      <div id="ham-incognito-badge">👻 Incognito — data will not be saved</div>
+      <div class="ham-hint">When on, nothing is saved to disk. Data is cleared when you close the app.</div>
     </div>
   </div>
 
@@ -4028,11 +4099,11 @@
     function toggleIncognito() {
       incognitoMode = !incognitoMode;
       document.body.classList.toggle('incognito', incognitoMode);
-      // sync drawer badge + label
-      const hamBadge = document.getElementById('ham-incognito-badge');
-      const hamLabel = document.getElementById('ham-incognito-label');
-      if (hamBadge) hamBadge.classList.toggle('visible', incognitoMode);
-      if (hamLabel) hamLabel.textContent = incognitoMode ? 'Incognito On' : 'Incognito Off';
+      // sync drawer switch + header badge
+      const switchEl = document.getElementById('ham-switch');
+      const headerBadge = document.getElementById('incognito-badge');
+      if (switchEl) switchEl.classList.toggle('on', incognitoMode);
+      if (headerBadge) headerBadge.classList.toggle('visible', incognitoMode);
       if (incognitoMode) {
         // stash current data, start fresh in memory
         items = []; categories = [];
