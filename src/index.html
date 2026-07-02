@@ -1231,6 +1231,49 @@
       border-color: var(--accent2);
     }
 
+    #panel-bio-wrap {
+      position: relative;
+    }
+
+    #panel-bio-wrap.collapsed #panel-bio {
+      max-height: 4.95em; /* ~3 lines at 1.65 line-height */
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    #panel-bio-wrap.collapsed::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      bottom: 26px;
+      height: 32px;
+      background: linear-gradient(to bottom, transparent, var(--surface));
+      pointer-events: none;
+    }
+
+    #panel-bio-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin: 0 0 16px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .74rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--accent2);
+    }
+
+    #panel-bio-toggle:hover {
+      text-decoration: underline;
+    }
+
+    #panel-bio-wrap.has-toggle #panel-bio-toggle {
+      display: inline-block;
+    }
+
     .stat-row {
       display: flex;
       align-items: center;
@@ -1559,6 +1602,157 @@
       color: var(--muted);
       text-align: center;
       padding: 14px 0;
+    }
+
+    /* ── BACKUP RESTORE MODAL ── */
+    #backup-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #backup-modal-overlay.open {
+      display: flex;
+    }
+
+    #backup-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 82vh;
+      overflow-y: auto;
+    }
+
+    #backup-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 2;
+    }
+
+    #backup-modal-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    #backup-modal-hint {
+      padding: 12px 20px;
+      font-family: 'Barlow', sans-serif;
+      font-size: .74rem;
+      line-height: 1.5;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    #backup-list {
+      padding: 12px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 60px;
+    }
+
+    .backup-empty {
+      font-family: 'Barlow', sans-serif;
+      font-size: .85rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 24px 10px;
+    }
+
+    .backup-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 12px;
+    }
+
+    .backup-row-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .backup-row-date {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .9rem;
+      letter-spacing: .02em;
+      color: var(--text);
+    }
+
+    .backup-row-time {
+      font-family: 'Barlow', sans-serif;
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .backup-row-latest {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .62rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      border: 1px solid rgba(74, 232, 201, .35);
+      background: rgba(74, 232, 201, .08);
+      padding: 2px 6px;
+      border-radius: 2px;
+      margin-left: 8px;
+    }
+
+    .backup-row-restore {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .74rem;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      flex-shrink: 0;
+      transition: border-color .15s, color .15s;
+    }
+
+    .backup-row-restore:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .backup-row-restore:disabled {
+      opacity: .4;
+      cursor: default;
+    }
+
+    body.light #backup-modal {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    body.light .backup-row {
+      background: var(--bg);
+      border-color: var(--border);
     }
 
     /* ── COMPARE MODAL ── */
@@ -3666,6 +3860,9 @@
       <button class="ham-btn" onclick="bulkImportTrigger();closeHamMenu()">
         <span class="ham-icon">⊕</span> Add Images
       </button>
+      <button class="ham-btn" onclick="openBackupModal();closeHamMenu()">
+        <span class="ham-icon">🕐</span> Backups
+      </button>
       <button class="ham-toggle-row" id="ham-incognito-btn" onclick="toggleIncognito()" title="Toggle incognito mode">
         <span class="ham-toggle-label"><span class="ham-icon">👻</span> Incognito</span>
         <span class="ham-switch" id="ham-switch">
@@ -3746,7 +3943,10 @@
     </div>
     <div id="panel-body">
       <div id="panel-tags" class="panel-tags"></div>
-      <div id="panel-bio"></div>
+      <div id="panel-bio-wrap">
+        <div id="panel-bio"></div>
+        <button id="panel-bio-toggle" onclick="togglePanelBio()">Read more ▾</button>
+      </div>
       <div id="panel-stats"></div>
     </div>
     <div id="panel-footer">
@@ -3837,6 +4037,22 @@
         </div>
         <div id="tpl-list"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- BACKUP MODAL -->
+  <div id="backup-modal-overlay">
+    <div id="backup-modal">
+      <div id="backup-modal-header">
+        <h2>🕐 Backups</h2>
+        <button class="btn small" onclick="closeBackupModal()">✕</button>
+      </div>
+      <div id="backup-modal-hint">
+        A snapshot is taken automatically each time you open Axis and make your first change.
+        Up to 10 most recent are kept. Restoring replaces your current items and categories —
+        export first if you want to keep what you have now.
+      </div>
+      <div id="backup-list"></div>
     </div>
   </div>
 
@@ -4508,9 +4724,21 @@
         `<span class="tag-chip interactive" onclick="setTagFilter('${esc(t)}');closePanel()">${esc(t)}</span>`
       ).join('');
 
-      const bioEl = document.getElementById('panel-bio');
+      const bioEl   = document.getElementById('panel-bio');
+      const bioWrap = document.getElementById('panel-bio-wrap');
       bioEl.innerHTML = linkify(item.bio || '');
-      bioEl.style.marginBottom = item.bio ? '18px' : '0';
+      bioWrap.style.display = item.bio ? 'block' : 'none';
+      bioWrap.classList.remove('has-toggle', 'collapsed');
+      if (item.bio) {
+        // Defer measurement until the browser has laid out the text
+        requestAnimationFrame(() => {
+          const isOverflowing = bioEl.scrollHeight > bioEl.clientHeight + 4;
+          if (isOverflowing) {
+            bioWrap.classList.add('has-toggle', 'collapsed');
+            document.getElementById('panel-bio-toggle').textContent = 'Read more ▾';
+          }
+        });
+      }
 
       const statsEl = document.getElementById('panel-stats');
       statsEl.innerHTML = '';
@@ -4823,6 +5051,78 @@
     }
 
     // ── CATEGORIES MODAL ───────────────────────────────
+    // ── BACKUP RESTORE ──────────────────────────────────
+    async function openBackupModal() {
+      const overlay = document.getElementById('backup-modal-overlay');
+      overlay.classList.add('open');
+      await renderBackupList();
+    }
+    function closeBackupModal() {
+      document.getElementById('backup-modal-overlay').classList.remove('open');
+    }
+
+    function _formatBackupTimestamp(ts) {
+      if (!ts) return { date: 'Unknown date', time: '' };
+      const date = ts.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      const time = ts.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      return { date, time };
+    }
+
+    async function renderBackupList() {
+      const list = document.getElementById('backup-list');
+      list.innerHTML = '<div class="backup-empty">Loading…</div>';
+
+      if (!AxisStorage.isTauri) {
+        list.innerHTML = '<div class="backup-empty">Backups are only available in the desktop app.</div>';
+        return;
+      }
+
+      const backups = await AxisStorage.listBackups();
+      if (!backups.length) {
+        list.innerHTML = '<div class="backup-empty">No backups yet. One is created automatically the first time you make a change in a session.</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      backups.forEach((b, i) => {
+        const { date, time } = _formatBackupTimestamp(b.timestamp);
+        const row = document.createElement('div');
+        row.className = 'backup-row';
+        row.innerHTML = `
+          <div class="backup-row-info">
+            <div class="backup-row-date">${esc(date)}${i === 0 ? '<span class="backup-row-latest">Latest</span>' : ''}</div>
+            <div class="backup-row-time">${esc(time)}</div>
+          </div>
+          <button class="backup-row-restore" onclick="restoreBackupByName('${esc(b.name).replace(/'/g, "\\'")}')">↺ Restore</button>`;
+        list.appendChild(row);
+      });
+    }
+
+    async function restoreBackupByName(filename) {
+      const confirmed = confirm(
+        'Restore this backup?\\n\\nThis replaces your CURRENT items and categories. ' +
+        'If you have unsaved or unexported changes you want to keep, cancel and export first.'
+      );
+      if (!confirmed) return;
+
+      const btns = document.querySelectorAll('.backup-row-restore');
+      btns.forEach(b => b.disabled = true);
+
+      const data = await AxisStorage.restoreBackup(filename);
+      if (!data) {
+        showToast('Could not restore that backup.', true);
+        btns.forEach(b => b.disabled = false);
+        return;
+      }
+
+      items      = data.items || [];
+      categories = data.categories || [];
+      await axisSave(items, categories);
+      render();
+      closeBackupModal();
+      showToast(`Restored backup — ${items.length} item${items.length === 1 ? '' : 's'} loaded.`);
+    }
+
     function openCatModal() {
       renderCatList();
       renderTplList();
@@ -5660,6 +5960,14 @@
       prev.style.opacity = _panelImgIdx === 0 ? '.35' : '1';
       next.style.opacity = _panelImgIdx === total - 1 ? '.35' : '1';
     }
+    function togglePanelBio() {
+      const wrap = document.getElementById('panel-bio-wrap');
+      const btn  = document.getElementById('panel-bio-toggle');
+      const collapsing = !wrap.classList.contains('collapsed');
+      wrap.classList.toggle('collapsed', collapsing);
+      btn.textContent = collapsing ? 'Read more ▾' : 'Show less ▴';
+    }
+
     function panelImgNav(dir) {
       const total = _panelImgs.length;
       _panelImgIdx = Math.max(0, Math.min(total - 1, _panelImgIdx + dir));
@@ -5851,7 +6159,7 @@
 
     // ── KEYBOARD ──────────────────────────────────────
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closePanel(); closeCatModal(); closeCompare(); document.getElementById('viewer-overlay').classList.remove('open'); }
+      if (e.key === 'Escape') { closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal(); document.getElementById('viewer-overlay').classList.remove('open'); }
       // Ctrl/Cmd+F focuses search
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         const s = document.getElementById('search-input');

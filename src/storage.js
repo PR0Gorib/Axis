@@ -325,7 +325,8 @@ const AxisStorage = (() => {
   }
 
   /**
-   * List all backups. Returns array of { name, date } sorted newest first.
+   * List all backups. Returns array of { name, label, timestamp } sorted newest first.
+   * `timestamp` is a JS Date parsed from the filename for display formatting.
    */
   async function listBackups() {
     if (!isTauri()) return [];
@@ -333,9 +334,36 @@ const AxisStorage = (() => {
       const entries = await fs().readDir(_backupsDir);
       return entries
         .filter(e => e.name?.endsWith('.zip'))
-        .map(e => ({ name: e.name, label: e.name.replace('.zip', '').replace('_', ' ') }))
+        .map(e => {
+          // filename format: YYYY-MM-DD_HH-MM-SS.zip
+          const raw = e.name.replace('.zip', '');
+          const [datePart, timePart] = raw.split('_');
+          const iso = timePart ? `${datePart}T${timePart.replace(/-/g, ':')}` : datePart;
+          const ts  = new Date(iso);
+          return { name: e.name, label: raw, timestamp: isNaN(ts) ? null : ts };
+        })
         .sort((a, b) => b.name.localeCompare(a.name));
     } catch(e) { return []; }
+  }
+
+  /**
+   * Restore a backup by filename (as returned by listBackups()).
+   * Extracts data.json + images from the ZIP, writes images to disk,
+   * and returns { items, categories } ready to load into memory.
+   * Does NOT touch the current data.json — caller should saveData()
+   * afterwards to persist the restored state as the new current data.
+   * Returns null on failure.
+   */
+  async function restoreBackup(filename) {
+    if (!isTauri()) return null;
+    try {
+      const backupPath = await join(_backupsDir, filename);
+      if (!await fs().exists(backupPath)) return null;
+      return await _readZipFile(backupPath);
+    } catch(e) {
+      console.error('[AxisStorage] restoreBackup failed:', e);
+      return null;
+    }
   }
 
   // ── IMPORT ────────────────────────────────────────────────────────────────
@@ -684,6 +712,7 @@ const AxisStorage = (() => {
     deleteImage,
     createBackup,
     listBackups,
+    restoreBackup,
     importFile,
     exportJSON,
     exportZip,
