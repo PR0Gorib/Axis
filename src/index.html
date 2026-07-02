@@ -207,10 +207,7 @@
       border-bottom-color: var(--border);
     }
 
-    body.light #panel-img-placeholder {
-      background: #c0c1cc;
-      color: var(--border);
-    }
+    body.light
 
     body.light .stat-bar {
       background: var(--border);
@@ -1187,25 +1184,6 @@
       text-transform: uppercase;
     }
 
-    #panel-img {
-      width: 100%;
-      max-height: 480px;
-      object-fit: contain;
-      background: #1c1c22;
-      display: block;
-    }
-
-    #panel-img-placeholder {
-      width: 100%;
-      min-height: 180px;
-      background: var(--header);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
-      color: var(--border);
-    }
-
     #panel-body {
       padding: 16px;
       flex: 1;
@@ -1787,6 +1765,64 @@
       letter-spacing: .08em;
       text-transform: uppercase;
     }
+
+    #cmp-radar-toggle.active {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    #cmp-radar-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0 24px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #cmp-radar-wrap.visible {
+      display: flex;
+    }
+
+    #cmp-radar-canvas {
+      max-width: 100%;
+    }
+
+    #cmp-radar-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 18px;
+      justify-content: center;
+      margin-top: 6px;
+    }
+
+    .cmp-radar-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .8rem;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .cmp-radar-legend-swatch {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    #cmp-radar-empty {
+      font-family: 'Barlow', sans-serif;
+      font-size: .82rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 20px 0;
+    }
+
 
     #cmp-body {
       flex: 1;
@@ -2613,49 +2649,11 @@
       position: relative;
     }
 
-    #stats-bar-view-btn {
-      margin-left: auto;
-      align-self: center;
-      flex-shrink: 0;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 700;
-      font-size: .72rem;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      padding: 4px 10px;
-      border: 1.5px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      border-radius: 2px;
-      transition: all .15s;
-      margin-right: 16px;
-    }
+    body.light
 
-    #stats-bar-view-btn:hover {
-      color: var(--text);
-      border-color: var(--text);
-    }
+    body.light
 
-    #stats-bar-view-btn.active {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    body.light #stats-bar-view-btn {
-      color: var(--muted);
-      border-color: var(--border);
-    }
-
-    body.light #stats-bar-view-btn:hover {
-      color: var(--text);
-      border-color: var(--text);
-    }
-
-    body.light #stats-bar-view-btn.active {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
+    body.light
 
     /* ── PER-STAT NOTES ── */
     .stat-note-wrap {
@@ -2835,11 +2833,6 @@
 
     #img-add-row input[type=url]:focus {
       border-color: var(--accent);
-    }
-
-    #img-upload-label {
-      cursor: pointer;
-      white-space: nowrap;
     }
 
     #img-thumb-strip {
@@ -3767,7 +3760,6 @@
       }
 
       header,
-      #search-row,
       #sort-bar,
       #toolbar-utils,
       #score-filter-bar,
@@ -4060,9 +4052,16 @@
   <div id="cmp-overlay">
     <div id="cmp-header">
       <h2>⇆ Side-by-Side Comparison</h2>
-      <button class="btn small" onclick="closeCompare()">✕ Close</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn small" id="cmp-radar-toggle" onclick="toggleCmpRadar()">📊 Radar</button>
+        <button class="btn small" onclick="closeCompare()">✕ Close</button>
+      </div>
     </div>
     <div id="cmp-body">
+      <div id="cmp-radar-wrap">
+        <canvas id="cmp-radar-canvas"></canvas>
+        <div id="cmp-radar-legend"></div>
+      </div>
       <div id="cmp-table"></div>
     </div>
   </div>
@@ -4728,16 +4727,24 @@
       const bioWrap = document.getElementById('panel-bio-wrap');
       bioEl.innerHTML = linkify(item.bio || '');
       bioWrap.style.display = item.bio ? 'block' : 'none';
-      bioWrap.classList.remove('has-toggle', 'collapsed');
+      bioWrap.classList.remove('has-toggle');
       if (item.bio) {
-        // Defer measurement until the browser has laid out the text
+        // Apply the collapsed constraint FIRST so clientHeight reflects the
+        // clamped box — measuring before this always reported "not overflowing"
+        // because an unclamped element's scrollHeight == clientHeight.
+        bioWrap.classList.add('collapsed');
         requestAnimationFrame(() => {
           const isOverflowing = bioEl.scrollHeight > bioEl.clientHeight + 4;
           if (isOverflowing) {
-            bioWrap.classList.add('has-toggle', 'collapsed');
+            bioWrap.classList.add('has-toggle');
             document.getElementById('panel-bio-toggle').textContent = 'Read more ▾';
+          } else {
+            // Short bio — no need to clamp or show a toggle
+            bioWrap.classList.remove('collapsed');
           }
         });
+      } else {
+        bioWrap.classList.remove('collapsed');
       }
 
       const statsEl = document.getElementById('panel-stats');
@@ -4780,9 +4787,136 @@
     }
 
     // ── COMPARE VIEW ───────────────────────────────────
+    // ── COMPARE RADAR CHART ─────────────────────────────
+    let cmpRadarOpen = false;
+    let _cmpSelectedItems = []; // cached for redraw on toggle
+
+    function toggleCmpRadar() {
+      cmpRadarOpen = !cmpRadarOpen;
+      const wrap = document.getElementById('cmp-radar-wrap');
+      const btn  = document.getElementById('cmp-radar-toggle');
+      wrap.classList.toggle('visible', cmpRadarOpen);
+      btn.classList.toggle('active', cmpRadarOpen);
+      if (cmpRadarOpen) drawCmpRadar(_cmpSelectedItems);
+    }
+
+    // Distinct, theme-consistent colours per compare slot (max 4 items)
+    const CMP_RADAR_COLORS = ['#d94f5c', '#4ae8c9', '#e8c94a', '#8a7fe8'];
+
+    function drawCmpRadar(selected) {
+      const canvas = document.getElementById('cmp-radar-canvas');
+      const legend = document.getElementById('cmp-radar-legend');
+      const wrap   = document.getElementById('cmp-radar-wrap');
+      legend.innerHTML = '';
+
+      if (!categories.length || categories.length < 3) {
+        canvas.style.display = 'none';
+        legend.innerHTML = '<div id="cmp-radar-empty">Radar needs at least 3 categories to draw a shape.</div>';
+        return;
+      }
+      canvas.style.display = 'block';
+
+      const N = categories.length;
+      const size = Math.min(440, wrap.clientWidth || 440);
+      const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
+      canvas.width  = size * DPR;
+      canvas.height = size * DPR;
+      canvas.style.width  = size + 'px';
+      canvas.style.height = size + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(DPR, DPR);
+      ctx.clearRect(0, 0, size, size);
+
+      const cx = size / 2, cy = size / 2;
+      const labelPad = 46; // room for category labels around the edge
+      const R = size / 2 - labelPad;
+      const rings = 4;
+
+      const angleFor = i => (Math.PI * 2 * i) / N - Math.PI / 2;
+
+      // ── Ring grid (concentric N-gons) ───────────────────────────────────
+      ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+      ctx.lineWidth = 1;
+      for (let r = 1; r <= rings; r++) {
+        const ringR = (R * r) / rings;
+        ctx.beginPath();
+        for (let i = 0; i <= N; i++) {
+          const a = angleFor(i % N);
+          const x = cx + ringR * Math.cos(a);
+          const y = cy + ringR * Math.sin(a);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // ── Spokes ───────────────────────────────────────────────────────────
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      for (let i = 0; i < N; i++) {
+        const a = angleFor(i);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + R * Math.cos(a), cy + R * Math.sin(a));
+        ctx.stroke();
+      }
+
+      // ── Category labels ──────────────────────────────────────────────────
+      ctx.font = '600 11px Barlow, system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      categories.forEach((k, i) => {
+        const a = angleFor(i);
+        const lx = cx + (R + 22) * Math.cos(a);
+        const ly = cy + (R + 22) * Math.sin(a);
+        ctx.textAlign = Math.cos(a) > 0.2 ? 'left' : Math.cos(a) < -0.2 ? 'right' : 'center';
+        ctx.textBaseline = Math.sin(a) > 0.2 ? 'top' : Math.sin(a) < -0.2 ? 'bottom' : 'middle';
+        const label = k.length > 12 ? k.slice(0, 11) + '…' : k;
+        ctx.fillText(label.toUpperCase(), lx, ly);
+      });
+
+      // ── Item polygons ────────────────────────────────────────────────────
+      selected.forEach((item, idx) => {
+        const color = CMP_RADAR_COLORS[idx % CMP_RADAR_COLORS.length];
+        ctx.beginPath();
+        categories.forEach((k, i) => {
+          const v   = Math.min(item.stats?.[k] ?? 0, statMax);
+          const pct = statMax > 0 ? v / statMax : 0;
+          const a   = angleFor(i);
+          const x   = cx + R * pct * Math.cos(a);
+          const y   = cy + R * pct * Math.sin(a);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = color + '26'; // ~15% alpha fill
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Vertex dots
+        categories.forEach((k, i) => {
+          const v   = Math.min(item.stats?.[k] ?? 0, statMax);
+          const pct = statMax > 0 ? v / statMax : 0;
+          const a   = angleFor(i);
+          const x   = cx + R * pct * Math.cos(a);
+          const y   = cy + R * pct * Math.sin(a);
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+        });
+
+        // Legend chip
+        const chip = document.createElement('div');
+        chip.className = 'cmp-radar-legend-item';
+        chip.innerHTML = `<span class="cmp-radar-legend-swatch" style="background:${color}"></span>${esc(item.name)}`;
+        legend.appendChild(chip);
+      });
+    }
+
     function openCompare() {
       if (compareSet.size < 2) return;
       const selected = [...compareSet].map(id => items.find(x => x.id === id)).filter(Boolean);
+      _cmpSelectedItems = selected;
+      if (cmpRadarOpen) drawCmpRadar(selected);
 
       // For each category, find the max value across selected items
       const maxPerCat = {};
@@ -4812,7 +4946,7 @@
         <div class="cmp-stat">
           <div class="cmp-stat-label">${esc(k)}${isWinner ? '<span class="cmp-winner-badge">best</span>' : ''}</div>
           <div class="cmp-stat-bar-wrap">
-            <div class="cmp-stat-bar"><div class="cmp-stat-fill${isWinner ? ' winner' : ''}" style="width:${v * 10}%"></div></div>
+            <div class="cmp-stat-bar"><div class="cmp-stat-fill${isWinner ? ' winner' : ''}" style="width:${(v / statMax * 100).toFixed(1)}%"></div></div>
             <div class="cmp-stat-val${isWinner ? ' winner' : ''}">${v}</div>
           </div>
         </div>`;
@@ -4822,7 +4956,7 @@
 
         col.innerHTML = `${imgHtml}
       <div class="cmp-col-name">${esc(item.name)}</div>
-      <div class="cmp-col-score">Overall: <span>${score.toFixed(1)}/10</span></div>
+      <div class="cmp-col-score">Overall: <span>${score.toFixed(1)}/${statMax}</span></div>
       ${statsHtml}`;
 
         table.appendChild(col);
