@@ -1766,12 +1766,14 @@
       text-transform: uppercase;
     }
 
-    #cmp-radar-toggle.active {
+    #cmp-radar-toggle.active,
+    #cmp-bars-toggle.active {
       border-color: var(--accent2);
       color: var(--accent2);
     }
 
-    #cmp-radar-wrap {
+    #cmp-radar-wrap,
+    #cmp-bars-wrap {
       display: none;
       flex-direction: column;
       align-items: center;
@@ -1780,15 +1782,18 @@
       border-bottom: 1px solid var(--border);
     }
 
-    #cmp-radar-wrap.visible {
+    #cmp-radar-wrap.visible,
+    #cmp-bars-wrap.visible {
       display: flex;
     }
 
-    #cmp-radar-canvas {
+    #cmp-radar-canvas,
+    #cmp-bars-canvas {
       max-width: 100%;
     }
 
-    #cmp-radar-legend {
+    #cmp-radar-legend,
+    #cmp-bars-legend {
       display: flex;
       flex-wrap: wrap;
       gap: 6px 18px;
@@ -1796,7 +1801,7 @@
       margin-top: 6px;
     }
 
-    .cmp-radar-legend-item {
+    .cmp-chart-legend-item {
       display: flex;
       align-items: center;
       gap: 7px;
@@ -1808,14 +1813,15 @@
       color: var(--text);
     }
 
-    .cmp-radar-legend-swatch {
+    .cmp-chart-legend-swatch {
       width: 11px;
       height: 11px;
       border-radius: 3px;
       flex-shrink: 0;
     }
 
-    #cmp-radar-empty {
+    #cmp-radar-empty,
+    #cmp-bars-empty {
       font-family: 'Barlow', sans-serif;
       font-size: .82rem;
       color: var(--muted);
@@ -4054,6 +4060,7 @@
       <h2>⇆ Side-by-Side Comparison</h2>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn small" id="cmp-radar-toggle" onclick="toggleCmpRadar()">📊 Radar</button>
+        <button class="btn small" id="cmp-bars-toggle" onclick="toggleCmpBars()">📶 Bars</button>
         <button class="btn small" onclick="closeCompare()">✕ Close</button>
       </div>
     </div>
@@ -4061,6 +4068,10 @@
       <div id="cmp-radar-wrap">
         <canvas id="cmp-radar-canvas"></canvas>
         <div id="cmp-radar-legend"></div>
+      </div>
+      <div id="cmp-bars-wrap">
+        <canvas id="cmp-bars-canvas"></canvas>
+        <div id="cmp-bars-legend"></div>
       </div>
       <div id="cmp-table"></div>
     </div>
@@ -4789,6 +4800,7 @@
     // ── COMPARE VIEW ───────────────────────────────────
     // ── COMPARE RADAR CHART ─────────────────────────────
     let cmpRadarOpen = false;
+    let cmpBarsOpen  = false;
     let _cmpSelectedItems = []; // cached for redraw on toggle
 
     function toggleCmpRadar() {
@@ -4800,8 +4812,44 @@
       if (cmpRadarOpen) drawCmpRadar(_cmpSelectedItems);
     }
 
+    function toggleCmpBars() {
+      cmpBarsOpen = !cmpBarsOpen;
+      const wrap = document.getElementById('cmp-bars-wrap');
+      const btn  = document.getElementById('cmp-bars-toggle');
+      wrap.classList.toggle('visible', cmpBarsOpen);
+      btn.classList.toggle('active', cmpBarsOpen);
+      if (cmpBarsOpen) drawCmpBars(_cmpSelectedItems);
+    }
+
     // Distinct, theme-consistent colours per compare slot (max 4 items)
     const CMP_RADAR_COLORS = ['#d94f5c', '#4ae8c9', '#e8c94a', '#8a7fe8'];
+
+    // Wrap a category label to fit maxWidth px, using at most 2 lines.
+    // Long single words are truncated but never below half their original
+    // length, so the reader always gets at least the meaningful first half
+    // rather than a random mid-word chop. Shared by the radar and bar chart.
+    function wrapChartLabel(ctx, text, maxWidth) {
+      const words = text.split(' ');
+      if (words.length === 1) {
+        if (ctx.measureText(text).width <= maxWidth) return [text];
+        let t = text;
+        const minLen = Math.max(3, Math.ceil(text.length / 2));
+        while (t.length > minLen && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1);
+        return [t + '…'];
+      }
+      if (ctx.measureText(text).width <= maxWidth) return [text];
+      let mid = Math.floor(text.length / 2);
+      let splitIdx = text.lastIndexOf(' ', mid);
+      if (splitIdx === -1) splitIdx = text.indexOf(' ', mid);
+      if (splitIdx === -1) splitIdx = mid;
+      let line1 = text.slice(0, splitIdx).trim();
+      let line2 = text.slice(splitIdx).trim();
+      if (ctx.measureText(line2).width > maxWidth) {
+        while (line2.length > 3 && ctx.measureText(line2 + '…').width > maxWidth) line2 = line2.slice(0, -1);
+        line2 += '…';
+      }
+      return [line1, line2];
+    }
 
     function drawCmpRadar(selected) {
       const canvas = document.getElementById('cmp-radar-canvas');
@@ -4817,7 +4865,7 @@
       canvas.style.display = 'block';
 
       const N = categories.length;
-      const size = Math.min(440, wrap.clientWidth || 440);
+      const size = Math.min(460, wrap.clientWidth || 460);
       const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
       canvas.width  = size * DPR;
       canvas.height = size * DPR;
@@ -4828,7 +4876,7 @@
       ctx.clearRect(0, 0, size, size);
 
       const cx = size / 2, cy = size / 2;
-      const labelPad = 46; // room for category labels around the edge
+      const labelPad = 62; // more room so labels rarely need truncating
       const R = size / 2 - labelPad;
       const rings = 4;
 
@@ -4859,17 +4907,26 @@
         ctx.stroke();
       }
 
-      // ── Category labels ──────────────────────────────────────────────────
-      ctx.font = '600 11px Barlow, system-ui, sans-serif';
+      // ── Category labels — full name where possible, wrapped to 2 lines,
+      //    truncated only as a last resort (keeping at least half the word) ──
+      ctx.font = '600 10.5px Barlow, system-ui, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      const LABEL_MAX_W = 96;
+      const LABEL_LINE_H = 12;
       categories.forEach((k, i) => {
         const a = angleFor(i);
-        const lx = cx + (R + 22) * Math.cos(a);
-        const ly = cy + (R + 22) * Math.sin(a);
+        const lx = cx + (R + 26) * Math.cos(a);
+        const ly = cy + (R + 26) * Math.sin(a);
         ctx.textAlign = Math.cos(a) > 0.2 ? 'left' : Math.cos(a) < -0.2 ? 'right' : 'center';
-        ctx.textBaseline = Math.sin(a) > 0.2 ? 'top' : Math.sin(a) < -0.2 ? 'bottom' : 'middle';
-        const label = k.length > 12 ? k.slice(0, 11) + '…' : k;
-        ctx.fillText(label.toUpperCase(), lx, ly);
+        const vertDir = Math.sin(a) > 0.2 ? 'down' : Math.sin(a) < -0.2 ? 'up' : 'center';
+        const lines = wrapChartLabel(ctx, k.toUpperCase(), LABEL_MAX_W);
+        const totalH = lines.length * LABEL_LINE_H;
+        ctx.textBaseline = 'middle';
+        let startY;
+        if (vertDir === 'down')      startY = ly + LABEL_LINE_H / 2;
+        else if (vertDir === 'up')   startY = ly - totalH + LABEL_LINE_H / 2;
+        else                          startY = ly - totalH / 2 + LABEL_LINE_H / 2;
+        lines.forEach((line, li) => ctx.fillText(line, lx, startY + li * LABEL_LINE_H));
       });
 
       // ── Item polygons ────────────────────────────────────────────────────
@@ -4906,8 +4963,123 @@
 
         // Legend chip
         const chip = document.createElement('div');
-        chip.className = 'cmp-radar-legend-item';
-        chip.innerHTML = `<span class="cmp-radar-legend-swatch" style="background:${color}"></span>${esc(item.name)}`;
+        chip.className = 'cmp-chart-legend-item';
+        chip.innerHTML = `<span class="cmp-chart-legend-swatch" style="background:${color}"></span>${esc(item.name)}`;
+        legend.appendChild(chip);
+      });
+    }
+
+    // ── COMPARE BAR CHART ────────────────────────────────
+    // Grouped bars — one group per category, one bar per selected item.
+    // Complements the radar: easier to read exact "who's ahead" per category
+    // than a radar's angular spokes, especially with 3+ items selected.
+    function drawCmpBars(selected) {
+      const canvas = document.getElementById('cmp-bars-canvas');
+      const legend = document.getElementById('cmp-bars-legend');
+      const wrap   = document.getElementById('cmp-bars-wrap');
+      legend.innerHTML = '';
+
+      if (!categories.length) {
+        canvas.style.display = 'none';
+        legend.innerHTML = '<div id="cmp-bars-empty">No categories to chart yet.</div>';
+        return;
+      }
+      canvas.style.display = 'block';
+
+      const N = categories.length;
+      const width  = Math.min(680, wrap.clientWidth || 680);
+      const height = 300;
+      const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
+      canvas.width  = width * DPR;
+      canvas.height = height * DPR;
+      canvas.style.width  = width + 'px';
+      canvas.style.height = height + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(DPR, DPR);
+      ctx.clearRect(0, 0, width, height);
+
+      // Chart plot area — room left for y-axis labels, bottom for category labels
+      const padL = 42, padR = 12, padT = 14, padB = 46;
+      const x0 = padL, x1 = width - padR;
+      const y0 = padT,  y1 = height - padB;
+      const plotW = x1 - x0, plotH = y1 - y0;
+
+      // ── Y-axis gridlines + value labels (0, 25%, 50%, 75%, 100% of statMax) ──
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.font = '500 10px Barlow, system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let g = 0; g <= 4; g++) {
+        const frac = g / 4;
+        const gy = y1 - plotH * frac;
+        ctx.beginPath();
+        ctx.moveTo(x0, gy);
+        ctx.lineTo(x1, gy);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        const val = Math.round(statMax * frac);
+        ctx.fillText(String(val), x0 - 8, gy);
+      }
+
+      // ── Grouped bars ─────────────────────────────────────────────────────
+      const groupW = plotW / N;
+      const groupPad = Math.min(16, groupW * 0.18);
+      const barsPerGroup = Math.max(1, selected.length);
+      const barGap = 2;
+      const barW = (groupW - groupPad * 2 - barGap * (barsPerGroup - 1)) / barsPerGroup;
+
+      categories.forEach((cat, ci) => {
+        const groupX0 = x0 + ci * groupW + groupPad;
+        selected.forEach((item, ii) => {
+          const v   = Math.min(item.stats?.[cat] ?? 0, statMax);
+          const pct = statMax > 0 ? v / statMax : 0;
+          const barH = plotH * pct;
+          const bx = groupX0 + ii * (barW + barGap);
+          const by = y1 - barH;
+          const color = CMP_RADAR_COLORS[ii % CMP_RADAR_COLORS.length];
+
+          ctx.fillStyle = color;
+          ctx.fillRect(bx, by, Math.max(1, barW), Math.max(1, barH));
+
+          // Value label above the bar, only if there's room
+          if (barW >= 16) {
+            ctx.font = '700 9px Barlow, system-ui, sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.75)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText(String(v), bx + barW / 2, Math.max(by - 4, 10));
+          }
+        });
+      });
+
+      // ── Baseline axis ────────────────────────────────────────────────────
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath();
+      ctx.moveTo(x0, y1);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      // ── Category labels below each group — same wrap logic as the radar ──
+      ctx.font = '600 10px Barlow, system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const LABEL_LINE_H = 12;
+      categories.forEach((cat, ci) => {
+        const groupCx = x0 + ci * groupW + groupW / 2;
+        const lines = wrapChartLabel(ctx, cat.toUpperCase(), groupW - 4);
+        lines.forEach((line, li) => {
+          ctx.fillText(line, groupCx, y1 + 8 + li * LABEL_LINE_H);
+        });
+      });
+
+      // ── Legend ───────────────────────────────────────────────────────────
+      selected.forEach((item, idx) => {
+        const color = CMP_RADAR_COLORS[idx % CMP_RADAR_COLORS.length];
+        const chip = document.createElement('div');
+        chip.className = 'cmp-chart-legend-item';
+        chip.innerHTML = `<span class="cmp-chart-legend-swatch" style="background:${color}"></span>${esc(item.name)}`;
         legend.appendChild(chip);
       });
     }
@@ -4917,6 +5089,7 @@
       const selected = [...compareSet].map(id => items.find(x => x.id === id)).filter(Boolean);
       _cmpSelectedItems = selected;
       if (cmpRadarOpen) drawCmpRadar(selected);
+      if (cmpBarsOpen)  drawCmpBars(selected);
 
       // For each category, find the max value across selected items
       const maxPerCat = {};
