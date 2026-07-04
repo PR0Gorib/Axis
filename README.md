@@ -14,15 +14,14 @@ Games, movies, anime, phones, PC hardware, books, cars — if it can be rated, i
 
 - 📊 Custom ranking categories
 - ⚖️ Side-by-side comparison mode
+- 📈 Radar & bar chart visualizations
 - 🏆 Dynamic rankings, podiums & score tiers
-- 🖼️ Multi-image support with image management tools
-- 🔍 Search, tags & advanced filtering
+- 🖼️ Advanced image manager (up to 5 images per item)
+- 📤 Beautiful Share as Image exports
+- 💾 Automatic backups & restore manager
+- 🔍 Search, tags & advanced filtering 
 - 📋 Category templates
 - 📌 Favorites / pinned items
-- 📊 Collection insights & statistics
-- 📤 Share items as images
-- 📤 JSON & ZIP import/export
-- 💾 Automatic backups
 - 🌙 Dark & Light themes
 - 🖥️ Native desktop app via Tauri
 - 🔒 Fully offline & privacy-friendly
