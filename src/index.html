@@ -3019,6 +3019,21 @@
       border-left-color: #b8780a;
     }
 
+    /* The generic `body.light .card`/`.lrow` rules above set border-color
+       (all 4 sides) with higher specificity (extra `body` element) than the
+       plain `.card.tier-high` etc rules, silently erasing the tier's colored
+       left border in light mode. Re-assert it here at matching specificity
+       so the tier color always wins regardless of theme. */
+    body.light .card.tier-high,
+    body.light .lrow.tier-high {
+      border-left-color: var(--accent2);
+    }
+
+    body.light .card.tier-low,
+    body.light .lrow.tier-low {
+      border-left-color: var(--danger);
+    }
+
     /* ── PIN ── */
     .card.pinned {
       border-top: 2px solid var(--accent2);
@@ -4851,10 +4866,18 @@
       return [line1, line2];
     }
 
+    // Returns the RGB triplet to build rgba(...) chart colors from, matching
+    // the app's current --text color so radar/bar charts stay readable in
+    // both themes (unlike shareItemAsImage, which is intentionally fixed-dark).
+    function _chartInkRGB() {
+      return document.body.classList.contains('light') ? '51,59,60' : '232,232,236';
+    }
+
     function drawCmpRadar(selected) {
       const canvas = document.getElementById('cmp-radar-canvas');
       const legend = document.getElementById('cmp-radar-legend');
       const wrap   = document.getElementById('cmp-radar-wrap');
+      const ink    = _chartInkRGB();
       legend.innerHTML = '';
 
       if (!categories.length || categories.length < 3) {
@@ -4883,7 +4906,7 @@
       const angleFor = i => (Math.PI * 2 * i) / N - Math.PI / 2;
 
       // ── Ring grid (concentric N-gons) ───────────────────────────────────
-      ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+      ctx.strokeStyle = `rgba(${ink},0.14)`;
       ctx.lineWidth = 1;
       for (let r = 1; r <= rings; r++) {
         const ringR = (R * r) / rings;
@@ -4898,7 +4921,7 @@
       }
 
       // ── Spokes ───────────────────────────────────────────────────────────
-      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      ctx.strokeStyle = `rgba(${ink},0.22)`;
       for (let i = 0; i < N; i++) {
         const a = angleFor(i);
         ctx.beginPath();
@@ -4910,7 +4933,7 @@
       // ── Category labels — full name where possible, wrapped to 2 lines,
       //    truncated only as a last resort (keeping at least half the word) ──
       ctx.font = '600 10.5px Barlow, system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      ctx.fillStyle = `rgba(${ink},0.72)`;
       const LABEL_MAX_W = 96;
       const LABEL_LINE_H = 12;
       categories.forEach((k, i) => {
@@ -4977,6 +5000,7 @@
       const canvas = document.getElementById('cmp-bars-canvas');
       const legend = document.getElementById('cmp-bars-legend');
       const wrap   = document.getElementById('cmp-bars-wrap');
+      const ink    = _chartInkRGB();
       legend.innerHTML = '';
 
       if (!categories.length) {
@@ -5005,9 +5029,9 @@
       const plotW = x1 - x0, plotH = y1 - y0;
 
       // ── Y-axis gridlines + value labels (0, 25%, 50%, 75%, 100% of statMax) ──
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.strokeStyle = `rgba(${ink},0.16)`;
       ctx.font = '500 10px Barlow, system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillStyle = `rgba(${ink},0.6)`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       for (let g = 0; g <= 4; g++) {
@@ -5045,7 +5069,7 @@
           // Value label above the bar, only if there's room
           if (barW >= 16) {
             ctx.font = '700 9px Barlow, system-ui, sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.75)';
+            ctx.fillStyle = `rgba(${ink},0.8)`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.fillText(String(v), bx + barW / 2, Math.max(by - 4, 10));
@@ -5054,7 +5078,7 @@
       });
 
       // ── Baseline axis ────────────────────────────────────────────────────
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.strokeStyle = `rgba(${ink},0.3)`;
       ctx.beginPath();
       ctx.moveTo(x0, y1);
       ctx.lineTo(x1, y1);
@@ -5062,7 +5086,7 @@
 
       // ── Category labels below each group — same wrap logic as the radar ──
       ctx.font = '600 10px Barlow, system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      ctx.fillStyle = `rgba(${ink},0.72)`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       const LABEL_LINE_H = 12;
@@ -6465,12 +6489,48 @@
     }
 
     // ── KEYBOARD ──────────────────────────────────────
+    // True while focus is in a text field / textarea / contenteditable —
+    // shortcuts below must not fire while the person is just typing.
+    function _isTypingContext() {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+    }
+
+    // True while any modal, viewer, or the hamburger drawer is open —
+    // shortcuts below are scoped to the base grid/panel view only.
+    function _anyOverlayOpen() {
+      const ids = [
+        'modal-overlay', 'cat-modal-overlay', 'backup-modal-overlay',
+        'cmp-overlay', 'bulk-overlay', 'viewer-overlay', 'ham-drawer',
+      ];
+      return ids.some(id => document.getElementById(id)?.classList.contains('open'));
+    }
+
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal(); document.getElementById('viewer-overlay').classList.remove('open'); }
       // Ctrl/Cmd+F focuses search
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         const s = document.getElementById('search-input');
         if (document.activeElement !== s) { e.preventDefault(); s.focus(); s.select(); }
+      }
+
+      // Power-user shortcuts — skip while typing or while any modal/overlay is open
+      if (_isTypingContext() || _anyOverlayOpen()) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const panelOpen = document.getElementById('panel').classList.contains('open');
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        openAddModal();
+      } else if ((e.key === 'e' || e.key === 'E') && panelOpen) {
+        e.preventDefault();
+        document.getElementById('panel-edit-btn').click();
+      } else if (e.key === 'Delete' && panelOpen) {
+        e.preventDefault();
+        document.getElementById('panel-del-btn').click();
       }
     });
 
