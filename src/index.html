@@ -716,6 +716,156 @@
       flex: 1;
     }
 
+    /* ── BULK EDIT STATS ── */
+    #bulk-edit-bar {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 140;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      padding: 12px 24px;
+      background: var(--surface);
+      border-top: 1px solid var(--accent2);
+      box-shadow: 0 -6px 20px rgba(0, 0, 0, .25);
+    }
+
+    #bulk-edit-bar.visible {
+      display: flex;
+    }
+
+    #bulk-edit-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    #bulk-edit-count {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .85rem;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      min-width: 90px;
+    }
+
+    #bulk-edit-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    #bulk-edit-category {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-size: .85rem;
+      padding: 6px 10px;
+      outline: none;
+      max-width: 200px;
+    }
+
+    #bulk-edit-category:focus {
+      border-color: var(--accent2);
+    }
+
+    #bulk-edit-value {
+      width: 76px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .9rem;
+      padding: 6px 8px;
+      text-align: center;
+      outline: none;
+    }
+
+    #bulk-edit-value:focus {
+      border-color: var(--accent2);
+    }
+
+    /* Bulk-select checkbox overlay on cards/rows — top-right corner (compare's
+       numbered badge and the pin indicator both live top-left, so this stays
+       clear of them). Hidden unless bulk edit mode is active. */
+    .bulk-checkbox {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      z-index: 4;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      border: 2px solid rgba(255, 255, 255, .4);
+      background: rgba(0, 0, 0, .4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: .8rem;
+      font-weight: 900;
+      color: transparent;
+      pointer-events: none;
+    }
+
+    body.bulk-edit-mode .card .bulk-checkbox,
+    body.bulk-edit-mode .lrow .bulk-checkbox {
+      display: flex;
+    }
+
+    .card.bulk-selected .bulk-checkbox,
+    .lrow.bulk-selected .bulk-checkbox {
+      background: var(--accent2);
+      border-color: var(--accent2);
+      color: #000;
+    }
+
+    body.bulk-edit-mode .card,
+    body.bulk-edit-mode .lrow {
+      cursor: pointer;
+    }
+
+    .card.bulk-selected,
+    .lrow.bulk-selected {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 2px rgba(74, 232, 201, .25);
+    }
+
+    /* Hide the per-card action row while selecting for bulk edit, so a
+       misclick can't trigger edit/delete/pin instead of a selection */
+    body.bulk-edit-mode .card-actions,
+    body.bulk-edit-mode .lrow-actions {
+      display: none;
+    }
+
+    /* Leave room above the fixed bulk edit bar so the last row of items
+       isn't hidden behind it */
+    body.bulk-edit-mode #grid {
+      padding-bottom: 96px;
+    }
+
+    body.light #bulk-edit-bar {
+      background: var(--surface);
+      border-top-color: var(--accent2);
+    }
+
+    body.light #bulk-edit-category,
+    body.light #bulk-edit-value {
+      background: var(--bg);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
     #sort-bar {
       display: flex;
       align-items: center;
@@ -3610,6 +3760,20 @@
       color: var(--muted);
     }
 
+    #ham-version {
+      margin-top: auto;
+      padding: 14px 18px 16px;
+      border-top: 1px solid var(--border);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .68rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      opacity: .55;
+    }
+
     body.light #ham-drawer {
       background: var(--surface);
       border-left-color: var(--border);
@@ -3876,6 +4040,9 @@
       <button class="ham-btn" onclick="openBackupModal();closeHamMenu()">
         <span class="ham-icon">🕐</span> Backups
       </button>
+      <button class="ham-btn" onclick="enterBulkEditMode();closeHamMenu()">
+        <span class="ham-icon">🧮</span> Bulk Edit Stats
+      </button>
       <button class="ham-toggle-row" id="ham-incognito-btn" onclick="toggleIncognito()" title="Toggle incognito mode">
         <span class="ham-toggle-label"><span class="ham-icon">👻</span> Incognito</span>
         <span class="ham-switch" id="ham-switch">
@@ -3884,6 +4051,8 @@
       </button>
       <div class="ham-hint">When on, nothing is saved to disk. Data is cleared when you close the app.</div>
     </div>
+
+    <div id="ham-version">Axis v1.3.0</div>
   </div>
 
   <div id="toolbar">
@@ -3915,6 +4084,21 @@
     <span id="compare-count"></span>
     <button class="btn small accent2" id="compare-go-btn" onclick="openCompare()" disabled>⇆ Compare Selected</button>
     <button class="btn small" onclick="clearCompareSelection()">✕ Clear</button>
+  </div>
+
+  <!-- Bulk edit stats — separate selection mode, no 4-item cap like Compare -->
+  <div id="bulk-edit-bar">
+    <div id="bulk-edit-info">
+      <span id="bulk-edit-count">0 selected</span>
+      <button class="btn small" onclick="bulkSelectAll()">Select all visible</button>
+      <button class="btn small" onclick="bulkSelectNone()">Clear</button>
+    </div>
+    <div id="bulk-edit-controls">
+      <select id="bulk-edit-category"></select>
+      <input type="number" id="bulk-edit-value" step="0.5" min="0" placeholder="Value">
+      <button class="btn small primary" onclick="applyBulkEdit()">Apply to Selected</button>
+    </div>
+    <button class="btn small" id="bulk-edit-done-btn" onclick="exitBulkEditMode()">✕ Done</button>
   </div>
 
   <!-- Insights panel — collapsed by default, contains Ranking + Stats -->
@@ -4146,6 +4330,8 @@
     let currentSort = { cat: 'overall', dir: 'desc' };
     let searchQuery = '';
     let compareSet = new Set(); // ids selected for compare
+    let bulkEditMode = false;
+    let bulkEditSet = new Set(); // ids selected for bulk stat editing — no size cap unlike compareSet
     let editingId = null;
     let pendingImages = [];   // unified image list — index 0 is always primary
     let pendingTags = [];   // tags being edited in modal
@@ -4480,6 +4666,106 @@
       document.getElementById('compare-go-btn').disabled = count < 2;
     }
 
+    // ── BULK EDIT STATS ──────────────────────────────────
+    // Separate selection mode from Compare (no 4-item cap) for applying
+    // one stat value across many items at once — e.g. after adding a new
+    // category to a collection that already has 20 items.
+    function enterBulkEditMode() {
+      if (!categories.length) {
+        showToast('Add a category first — bulk edit needs one to apply.', true);
+        return;
+      }
+      bulkEditMode = true;
+      bulkEditSet.clear();
+      document.body.classList.add('bulk-edit-mode');
+
+      // Populate the category dropdown fresh each time
+      const catSelect = document.getElementById('bulk-edit-category');
+      catSelect.innerHTML = categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+      const valInput = document.getElementById('bulk-edit-value');
+      valInput.max = statMax;
+      valInput.value = '';
+
+      renderBulkEditBar();
+      render();
+      showToast('Bulk edit — click items to select, then choose a category and value.');
+    }
+
+    function exitBulkEditMode() {
+      bulkEditMode = false;
+      bulkEditSet.clear();
+      document.body.classList.remove('bulk-edit-mode');
+      document.getElementById('bulk-edit-bar').classList.remove('visible');
+      render();
+    }
+
+    function toggleBulkSelect(id) {
+      if (bulkEditSet.has(id)) bulkEditSet.delete(id);
+      else bulkEditSet.add(id);
+      renderBulkEditBar();
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if (card) card.classList.toggle('bulk-selected', bulkEditSet.has(id));
+    }
+
+    function bulkSelectAll() {
+      // Select everything currently visible under the active search/tag/
+      // score filters — not literally every item ever created — since that
+      // matches what the person can actually see on screen right now.
+      getFilteredItems().forEach(item => bulkEditSet.add(item.id));
+      renderBulkEditBar();
+      render();
+    }
+
+    function bulkSelectNone() {
+      bulkEditSet.clear();
+      renderBulkEditBar();
+      render();
+    }
+
+    function renderBulkEditBar() {
+      const bar = document.getElementById('bulk-edit-bar');
+      bar.classList.toggle('visible', bulkEditMode);
+      const count = bulkEditSet.size;
+      document.getElementById('bulk-edit-count').textContent =
+        `${count} selected`;
+    }
+
+    async function applyBulkEdit() {
+      if (bulkEditSet.size === 0) {
+        showToast('Select at least one item first.', true);
+        return;
+      }
+      const cat = document.getElementById('bulk-edit-category').value;
+      if (!cat) {
+        showToast('Choose a category first.', true);
+        return;
+      }
+      const rawVal = document.getElementById('bulk-edit-value').value;
+      let val = parseFloat(rawVal);
+      if (rawVal === '' || isNaN(val)) {
+        showToast('Enter a value first.', true);
+        return;
+      }
+      val = Math.min(Math.max(0, val), statMax);
+
+      const n = bulkEditSet.size;
+      const confirmed = confirm(`Set "${cat}" to ${val} for ${n} item${n === 1 ? '' : 's'}?`);
+      if (!confirmed) return;
+
+      items.forEach(item => {
+        if (bulkEditSet.has(item.id)) {
+          item.stats = item.stats || {};
+          item.stats[cat] = val;
+        }
+      });
+      await axisSave(items, categories);
+      render();
+      renderBulkEditBar();
+      document.getElementById('bulk-edit-value').value = '';
+      showToast(`Set "${cat}" to ${val} for ${n} item${n === 1 ? '' : 's'}.`);
+    }
+
     // ── RENDER ─────────────────────────────────────────
     const SORT_DROPDOWN_THRESHOLD = 4;
 
@@ -4673,7 +4959,7 @@
       sorted.forEach(item => {
         const card = document.createElement('div');
         const tier = scoreTier(item);
-        card.className = 'card' + (compareSet.has(item.id) ? ' selected' : '') + (item.pinned ? ' pinned' : '') + (tier ? ' ' + tier : '');
+        card.className = 'card' + (compareSet.has(item.id) ? ' selected' : '') + (bulkEditSet.has(item.id) ? ' bulk-selected' : '') + (item.pinned ? ' pinned' : '') + (tier ? ' ' + tier : '');
         card.dataset.id = item.id;
 
         const score = currentSort.cat === 'overall'
@@ -4694,11 +4980,12 @@
         card.innerHTML = `
       ${item.pinned ? '<span class="pin-indicator">📌</span>' : ''}
       <div class="card-select-badge">${selIdx >= 0 ? selIdx + 1 : ''}</div>
+      <div class="bulk-checkbox">✓</div>
       <div class="card-img-wrap">${imgHtml}</div>
       <div class="card-body">
         <div class="card-name">${esc(item.name)}</div>
         <div class="card-score">
-          <div class="card-score-bar"><div class="card-score-fill" style="width:${(Math.min(score, 10) / 10 * 100).toFixed(1)}%"></div></div>
+          <div class="card-score-bar"><div class="card-score-fill" style="width:${(Math.min(score, statMax) / statMax * 100).toFixed(1)}%"></div></div>
           <div class="card-score-val">${score.toFixed(1)}</div>
         </div>
         ${tagChipsHtml ? `<div class="card-tags">${tagChipsHtml}</div>` : ''}
@@ -4710,7 +4997,10 @@
         <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">✕</button>
       </div>`;
 
-        card.onclick = () => openPanel(item.id);
+        card.onclick = () => {
+          if (bulkEditMode) { toggleBulkSelect(item.id); return; }
+          openPanel(item.id);
+        };
         grid.appendChild(card);
       });
 
@@ -5976,7 +6266,7 @@
       sorted.forEach(item => {
         const row = document.createElement('div');
         const tier = scoreTier(item);
-        row.className = 'lrow' + (compareSet.has(item.id) ? ' selected' : '') + (tier ? ' ' + tier : '');
+        row.className = 'lrow' + (compareSet.has(item.id) ? ' selected' : '') + (bulkEditSet.has(item.id) ? ' bulk-selected' : '') + (tier ? ' ' + tier : '');
         row.dataset.id = item.id;
 
         const _lsrc = axisImgSrc(item.img);
@@ -5995,6 +6285,7 @@
         const selIdx = [...compareSet].indexOf(item.id);
 
         row.innerHTML = `
+      <div class="bulk-checkbox">✓</div>
       ${imgEl}
       <div class="lrow-name">${esc(item.name)}</div>
       <div class="lrow-stats">${statsHtml || '<span style="font-size:.75rem;color:var(--muted);">No stats</span>'}</div>
@@ -6005,7 +6296,10 @@
         <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">✕</button>
       </div>`;
 
-        row.onclick = () => openPanel(item.id);
+        row.onclick = () => {
+          if (bulkEditMode) { toggleBulkSelect(item.id); return; }
+          openPanel(item.id);
+        };
         grid.appendChild(row);
       });
       grid.appendChild(makeAddCard());
@@ -6509,15 +6803,20 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal(); document.getElementById('viewer-overlay').classList.remove('open'); }
+      if (e.key === 'Escape') {
+        closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal();
+        document.getElementById('viewer-overlay').classList.remove('open');
+        if (bulkEditMode) exitBulkEditMode();
+      }
       // Ctrl/Cmd+F focuses search
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         const s = document.getElementById('search-input');
         if (document.activeElement !== s) { e.preventDefault(); s.focus(); s.select(); }
       }
 
-      // Power-user shortcuts — skip while typing or while any modal/overlay is open
-      if (_isTypingContext() || _anyOverlayOpen()) return;
+      // Power-user shortcuts — skip while typing, while bulk editing, or
+      // while any modal/overlay is open
+      if (_isTypingContext() || _anyOverlayOpen() || bulkEditMode) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       const panelOpen = document.getElementById('panel').classList.contains('open');
