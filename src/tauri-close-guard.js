@@ -11,7 +11,7 @@
  *   5. onCloseRequested fires again, this time closeConfirmed=true → we return early
  *      and the window actually closes (no more preventDefault)
  *
- * Accesses globals from the main CTool <script> directly (no window. prefix)
+ * Accesses globals from the main Axis <script> directly (no window. prefix)
  * because they are `let` / `function` declarations, not window properties.
  */
 

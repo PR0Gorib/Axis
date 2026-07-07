@@ -6597,6 +6597,15 @@
       const total = _panelImgs.length;
       _panelImgIdx = Math.max(0, Math.min(total - 1, _panelImgIdx + dir));
       _renderPanelCarousel();
+      // Keep the fullscreen viewer in sync if it's currently showing this
+      // carousel — so ‹ › (or arrow keys) work the same way in both places.
+      const viewerOverlay = document.getElementById('viewer-overlay');
+      if (viewerOverlay.classList.contains('open')) {
+        viewerScale = 1;
+        const vimg = document.getElementById('viewer-img');
+        vimg.src = _panelImgs[_panelImgIdx];
+        vimg.style.transform = 'scale(1)';
+      }
     }
 
     // ── SHARE AS IMAGE ─────────────────────────────────
@@ -6812,6 +6821,21 @@
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         const s = document.getElementById('search-input');
         if (document.activeElement !== s) { e.preventDefault(); s.focus(); s.select(); }
+      }
+
+      // Arrow-key image navigation — works in the side panel AND the
+      // fullscreen viewer, since the viewer always mirrors whichever
+      // carousel image is currently active. Deliberately placed before the
+      // general overlay gate below, since the viewer being open is one of
+      // the overlays that gate would otherwise block this on.
+      if (!_isTypingContext() && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const viewerOpen = document.getElementById('viewer-overlay').classList.contains('open');
+        const panelOpenForNav = document.getElementById('panel').classList.contains('open');
+        if ((viewerOpen || panelOpenForNav) && _panelImgs.length > 1) {
+          e.preventDefault();
+          panelImgNav(e.key === 'ArrowLeft' ? -1 : 1);
+        }
       }
 
       // Power-user shortcuts — skip while typing, while bulk editing, or
