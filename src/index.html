@@ -1698,6 +1698,208 @@
       transition: opacity .15s;
     }
 
+    /* ── SETTINGS MODAL ── */
+    #settings-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #settings-modal-overlay.open {
+      display: flex;
+    }
+
+    #settings-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 88vh;
+      overflow-y: auto;
+    }
+
+    #settings-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 2;
+    }
+
+    #settings-modal-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    #settings-body {
+      padding: 6px 0 16px;
+    }
+
+    .settings-section {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-section:last-child {
+      border-bottom: none;
+    }
+
+    .settings-section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .74rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .settings-row + .settings-row {
+      margin-top: 14px;
+    }
+
+    .settings-row-label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .settings-row-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .92rem;
+      letter-spacing: .02em;
+      color: var(--text);
+    }
+
+    .settings-row-desc {
+      font-family: 'Barlow', sans-serif;
+      font-size: .74rem;
+      line-height: 1.4;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .settings-toggle-btn {
+      flex-shrink: 0;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .8rem;
+      letter-spacing: .04em;
+      padding: 7px 14px;
+      white-space: nowrap;
+      transition: border-color .15s, color .15s;
+    }
+
+    .settings-toggle-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .settings-section.danger .settings-section-title {
+      color: var(--danger);
+    }
+
+    .settings-danger-btn {
+      flex-shrink: 0;
+      background: none;
+      border: 1.5px solid var(--danger);
+      border-radius: 4px;
+      color: var(--danger);
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .8rem;
+      letter-spacing: .04em;
+      padding: 7px 14px;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+
+    .settings-danger-btn:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    #settings-about-version {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1rem;
+      letter-spacing: .04em;
+      color: var(--text);
+    }
+
+    #settings-about-desc {
+      font-family: 'Barlow', sans-serif;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    #settings-about-credit {
+      font-family: 'Barlow', sans-serif;
+      font-size: .74rem;
+      color: var(--muted);
+      opacity: .8;
+      margin-top: 8px;
+    }
+
+    #settings-about-links {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    #settings-about-links a {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .78rem;
+      letter-spacing: .03em;
+      color: var(--accent2);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(74, 232, 201, .3);
+      transition: border-color .15s;
+    }
+
+    #settings-about-links a:hover {
+      border-color: var(--accent2);
+    }
+
+    body.light #settings-modal {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    body.light .settings-toggle-btn {
+      background: var(--bg);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
     .cat-row-del:hover {
       opacity: 1;
     }
@@ -4019,6 +4221,9 @@
     </div>
 
     <div class="ham-section">
+      <button class="ham-btn" onclick="openSettingsModal();closeHamMenu()">
+        <span class="ham-icon">⚙</span> Settings
+      </button>
       <button class="ham-btn" onclick="openCatModal();closeHamMenu()">
         <span class="ham-icon">⊞</span> Categories
       </button>
@@ -4250,6 +4455,83 @@
         export first if you want to keep what you have now.
       </div>
       <div id="backup-list"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal-overlay">
+    <div id="settings-modal">
+      <div id="settings-modal-header">
+        <h2>⚙ Settings</h2>
+        <button class="btn small" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div id="settings-body">
+
+        <div class="settings-section">
+          <div class="settings-section-title">Appearance</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Theme</div>
+              <div class="settings-row-desc">Switch between dark and light mode.</div>
+            </div>
+            <button id="settings-theme-btn" class="settings-toggle-btn" onclick="toggleTheme()">🌙 Dark</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Stats</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Stat Scale</div>
+              <div class="settings-row-desc">Rate every item out of 10 or out of 100, with decimals either way.</div>
+            </div>
+            <button id="settings-statmax-btn" class="settings-toggle-btn" onclick="toggleStatMax()">Max 10</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Display</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Default View</div>
+              <div class="settings-row-desc">Show items as a grid of cards or a compact list.</div>
+            </div>
+            <button id="settings-view-btn" class="settings-toggle-btn" onclick="toggleView(); _syncSettingsUI();">⊞ Grid</button>
+          </div>
+        </div>
+
+        <div class="settings-section danger">
+          <div class="settings-section-title">Danger Zone</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Clear all items</div>
+              <div class="settings-row-desc">Deletes every item. Categories and templates are kept.</div>
+            </div>
+            <button class="settings-danger-btn" onclick="clearAllItems()">Clear Items</button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Reset everything</div>
+              <div class="settings-row-desc">Deletes all items and categories. Cannot be undone — export a backup first if unsure.</div>
+            </div>
+            <button class="settings-danger-btn" onclick="resetEverything()">Reset All</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">About</div>
+          <div id="settings-about">
+            <div id="settings-about-version">Axis v1.3.0</div>
+            <div id="settings-about-desc">A general purpose comparison &amp; ranking tool.</div>
+            <div id="settings-about-credit">Made with ❤️ by PR0Gorib</div>
+            <div id="settings-about-links">
+              <a href="https://github.com/PR0Gorib/Axis/" target="_blank" rel="noopener noreferrer">⭐ View on GitHub</a>
+              <a href="https://github.com/PR0Gorib/Axis/releases" target="_blank" rel="noopener noreferrer">⬇ Releases</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -5682,6 +5964,71 @@
       document.getElementById('backup-modal-overlay').classList.remove('open');
     }
 
+    // ── SETTINGS ─────────────────────────────────────────
+    function openSettingsModal() {
+      _syncSettingsUI();
+      document.getElementById('settings-modal-overlay').classList.add('open');
+    }
+    function closeSettingsModal() {
+      document.getElementById('settings-modal-overlay').classList.remove('open');
+    }
+
+    // Keeps the Settings panel's controls showing the correct current state.
+    // Called on open, and again after toggling any of the preferences it
+    // hosts (from Settings itself, or from wherever else that preference
+    // also lives — e.g. the header theme toggle, the Categories stat-max
+    // button, the toolbar view button — so it never goes stale.
+    function _syncSettingsUI() {
+      const themeBtn = document.getElementById('settings-theme-btn');
+      if (themeBtn) themeBtn.textContent = lightMode ? '☀️ Light' : '🌙 Dark';
+
+      const statBtn = document.getElementById('settings-statmax-btn');
+      if (statBtn) statBtn.textContent = `Max ${statMax}`;
+
+      const viewBtn = document.getElementById('settings-view-btn');
+      if (viewBtn) viewBtn.textContent = viewMode === 'list' ? '☰ List' : '⊞ Grid';
+    }
+
+    async function clearAllItems() {
+      if (!items.length) { showToast('There are no items to clear.', true); return; }
+      const n = items.length;
+      const confirmed = confirm(
+        `Delete all ${n} item${n === 1 ? '' : 's'}?\n\n` +
+        'Categories and templates are kept. This cannot be undone from here — ' +
+        'export a backup first if you want to keep a copy.'
+      );
+      if (!confirmed) return;
+      items = [];
+      compareSet.clear();
+      bulkEditSet.clear();
+      await axisSave(items, categories);
+      render();
+      closeSettingsModal();
+      showToast(`Cleared ${n} item${n === 1 ? '' : 's'}.`);
+    }
+
+    async function resetEverything() {
+      const confirmed = confirm(
+        'Reset Axis completely?\n\n' +
+        'This deletes ALL items AND categories, with no way to undo it from here. ' +
+        'Export a backup first if you want to keep anything.'
+      );
+      if (!confirmed) return;
+      // Require a second, more deliberate confirmation for the most
+      // destructive action in the app
+      const typed = prompt('Type RESET to confirm — this cannot be undone.');
+      if (typed !== 'RESET') { showToast('Reset cancelled.'); return; }
+
+      items = [];
+      categories = [];
+      compareSet.clear();
+      bulkEditSet.clear();
+      await axisSave(items, categories);
+      render();
+      closeSettingsModal();
+      showToast('Axis has been reset.');
+    }
+
     function _formatBackupTimestamp(ts) {
       if (!ts) return { date: 'Unknown date', time: '' };
       const date = ts.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -6397,6 +6744,7 @@
       if (label) label.textContent = lightMode ? 'Light' : 'Dark';
       if (btn) btn.title = lightMode ? 'Switch to dark mode' : 'Switch to light mode';
       axisSaveSettings({ theme: lightMode ? 'light' : 'dark' });
+      _syncSettingsUI();
     }
 
     // ── STAT MAX TOGGLE ────────────────────────────────
@@ -6418,6 +6766,7 @@
       renderGrid(); renderOverall(); renderStatsBar();
       axisSaveSettings({ statMax });
       showToast(`Max stat set to ${statMax}`);
+      _syncSettingsUI();
     }
 
 
@@ -6806,7 +7155,8 @@
     function _anyOverlayOpen() {
       const ids = [
         'modal-overlay', 'cat-modal-overlay', 'backup-modal-overlay',
-        'cmp-overlay', 'bulk-overlay', 'viewer-overlay', 'ham-drawer',
+        'settings-modal-overlay', 'cmp-overlay', 'bulk-overlay',
+        'viewer-overlay', 'ham-drawer',
       ];
       return ids.some(id => document.getElementById(id)?.classList.contains('open'));
     }
@@ -6814,6 +7164,7 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal();
+        closeSettingsModal();
         document.getElementById('viewer-overlay').classList.remove('open');
         if (bulkEditMode) exitBulkEditMode();
       }
