@@ -480,43 +480,63 @@ const AxisStorage = (() => {
     try {
       const entries = [];
 
-      // Serialise — inline base64 stays as-is in the ZIP's data.json
-      // so the ZIP is fully self-contained even without the images dir
-      entries.push({
-        name: 'data.json',
-        data: new TextEncoder().encode(JSON.stringify({ items, categories }, null, 2))
-      });
-
-      // Bundle one image field (img / img2 / img3) for one item
+      // Writes this field's image bytes into images/ exactly once, and
+      // returns the FILENAME to store in data.json for it. Previously
+      // data.json kept the raw base64 inline "for portability", but that
+      // meant every image was stored twice — once as base64 text in
+      // data.json (~33% larger than the raw bytes, plus JSON overhead) and
+      // once again as the actual file in images/. Storing a filename
+      // reference here instead — exactly like saveData() does on disk —
+      // means each image is only ever written into the ZIP once.
       async function bundleImg(item, field, suffix) {
         const val = item[field];
-        if (!val) return;
+        if (!val) return undefined;
+
         if (val.startsWith('data:')) {
-          // In-memory base64 — encode directly into ZIP
+          const filename = `img_${item.id}_${suffix}.jpg`;
           const b64    = val.split(',')[1];
           const binary = atob(b64);
           const bytes  = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          entries.push({ name: `images/img_${item.id}_${suffix}.jpg`, data: bytes });
-        } else if (isTauri()) {
-          // Filename ref — read from disk and bundle
+          entries.push({ name: `images/${filename}`, data: bytes });
+          return filename;
+        }
+
+        // Already a filename ref — read the real file from disk (Tauri
+        // only; browser mode has nothing on disk to read, so a filename
+        // ref there is stale and gets dropped rather than exported broken)
+        if (isTauri()) {
           try {
             const filePath = await join(_imagesDir, val);
             if (await fs().exists(filePath)) {
               const bytes = await fs().readFile(filePath);
               entries.push({ name: `images/${val}`, data: bytes });
+              return val;
             }
           } catch(e) { /* skip missing */ }
         }
+        return undefined;
       }
 
+      // Build a filename-ref-only copy of each item for data.json — never
+      // inline base64 — while bundleImg pushes the actual image bytes into
+      // entries as it goes.
+      const serializable = [];
       for (const item of items) {
-        await bundleImg(item, 'img',  1);
-        await bundleImg(item, 'img2', 2);
-        await bundleImg(item, 'img3', 3);
-        await bundleImg(item, 'img4', 4);
-        await bundleImg(item, 'img5', 5);
+        const copy = { ...item };
+        copy.img  = await bundleImg(item, 'img',  1);
+        copy.img2 = await bundleImg(item, 'img2', 2);
+        copy.img3 = await bundleImg(item, 'img3', 3);
+        copy.img4 = await bundleImg(item, 'img4', 4);
+        copy.img5 = await bundleImg(item, 'img5', 5);
+        serializable.push(copy);
       }
+
+      // data.json goes first in the archive for readability if opened manually
+      entries.unshift({
+        name: 'data.json',
+        data: new TextEncoder().encode(JSON.stringify({ items: serializable, categories }, null, 2))
+      });
 
       const zipBytes = buildZip(entries);
 
