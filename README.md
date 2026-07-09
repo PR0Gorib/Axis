@@ -17,10 +17,13 @@ Games, movies, anime, phones, PC hardware, books, cars — if it can be rated, i
 - 📈 Radar & bar chart visualizations
 - 🏆 Dynamic rankings, podiums & score tiers
 - 🖼️ Advanced image manager (up to 5 images per item)
-- 📤 Beautiful Share as Image exports
 - 💾 Automatic backups & restore manager
+- 🧮 Bulk stat editing tools
+- ⌨️ Keyboard shortcuts
+- ⚙️ Centralized settings panel
 - 🔍 Search, tags & advanced filtering 
 - 📋 Category templates
+- 📤 Beautiful Share as Image exports
 - 📌 Favorites / pinned items
 - 🌙 Dark & Light themes
 - 🖥️ Native desktop app via Tauri
