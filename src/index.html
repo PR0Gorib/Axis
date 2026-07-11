@@ -1011,7 +1011,29 @@
       padding: 6px 14px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #overall-share-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .64rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      transition: border-color .15s, color .15s;
+    }
+
+    #overall-share-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
     }
 
     #overall-list {
@@ -4257,7 +4279,7 @@
       <div class="ham-hint">When on, nothing is saved to disk. Data is cleared when you close the app.</div>
     </div>
 
-    <div id="ham-version">Axis v1.4.0</div>
+    <div id="ham-version">Axis v1.3.0</div>
   </div>
 
   <div id="toolbar">
@@ -4311,7 +4333,7 @@
     <div id="insights-body">
       <div id="stats-bar"></div>
       <div id="overall-section">
-        <h2>🏆 Ranking</h2>
+        <h2><span>🏆 Ranking</span><button id="overall-share-btn" onclick="shareLeaderboardAsImage()" title="Export ranking as image">📷 Share</button></h2>
         <div id="overall-list"></div>
       </div>
     </div>
@@ -4521,7 +4543,7 @@
         <div class="settings-section">
           <div class="settings-section-title">About</div>
           <div id="settings-about">
-            <div id="settings-about-version">Axis v1.4.0</div>
+            <div id="settings-about-version">Axis vX.X.X</div>
             <div id="settings-about-desc">A general purpose comparison &amp; ranking tool.</div>
             <div id="settings-about-credit">Made by PR0Gorib</div>
             <div id="settings-about-links">
@@ -7137,6 +7159,176 @@
         img.src = src;
       } else {
         build(null);
+      }
+    }
+
+    // ── SHARE LEADERBOARD AS IMAGE ──────────────────────
+    // Same visual language as shareItemAsImage above (fixed dark palette,
+    // same font stack, self-contained draw helpers) — but renders the
+    // whole ranking instead of one item.
+    function shareLeaderboardAsImage() {
+      if (!items.length) { showToast('No items to include in the leaderboard yet.', true); return; }
+      if (!categories.length) { showToast('Add a category first — ranking needs at least one.', true); return; }
+
+      const W        = 480;
+      const PAD      = 22;
+      const MAX_ITEMS = 20; // keeps the image a sane size; overflow is noted at the bottom
+
+      const sorted   = [...items].sort((a, b) => overallScore(b) - overallScore(a));
+      const shown    = sorted.slice(0, MAX_ITEMS);
+      const overflow = sorted.length - shown.length;
+
+      const ROW_H    = 54;
+      const HEADER_H = 78;
+      const FOOTER_H = overflow > 0 ? 46 : 30;
+      const H = HEADER_H + shown.length * ROW_H + FOOTER_H;
+
+      // Fixed dark palette — always looks the same regardless of the app's
+      // current theme, same as the single-item share image
+      const C_BG     = '#09090d';
+      const C_ROW    = '#131319'; // alternating row tint
+      const C_ACCENT = '#d94f5c';
+      const C_WHITE  = '#ffffff';
+      const C_LABEL  = 'rgba(255,255,255,0.5)';
+      const C_TRACK  = 'rgba(255,255,255,0.12)';
+      const C_DIV    = 'rgba(255,255,255,0.1)';
+      const C_DIM    = 'rgba(255,255,255,0.22)';
+      const RANK_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32']; // gold, silver, bronze
+
+      // Preload every visible item's primary thumbnail (or null if it has
+      // none / fails to load) before drawing anything
+      const loaders = shown.map(item => new Promise(resolve => {
+        const src = axisImgSrc(item.img);
+        if (!src) { resolve(null); return; }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload  = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      }));
+
+      Promise.all(loaders).then(build);
+
+      function build(thumbs) {
+        const canvas = document.createElement('canvas');
+        const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
+        canvas.width  = W * DPR;
+        canvas.height = H * DPR;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(DPR, DPR);
+
+        function box(x, y, w, h, c) {
+          ctx.fillStyle = c;
+          ctx.fillRect(~~x, ~~y, ~~Math.max(1, w), ~~Math.max(1, h));
+        }
+        function roundBox(x, y, w, h, r, c) {
+          const rr = Math.min(r, w / 2, h / 2);
+          ctx.fillStyle = c;
+          ctx.beginPath();
+          ctx.moveTo(x + rr, y);
+          ctx.arcTo(x + w, y, x + w, y + h, rr);
+          ctx.arcTo(x + w, y + h, x, y + h, rr);
+          ctx.arcTo(x, y + h, x, y, rr);
+          ctx.arcTo(x, y, x + w, y, rr);
+          ctx.closePath();
+          ctx.fill();
+        }
+        function txt(s, x, y, font, c, align) {
+          ctx.save();
+          ctx.font = font; ctx.fillStyle = c;
+          ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+          ctx.fillText(s, ~~x, ~~y);
+          ctx.restore();
+        }
+        function measure(s, font) {
+          ctx.save(); ctx.font = font;
+          const w = ctx.measureText(s).width;
+          ctx.restore(); return w;
+        }
+        function trunc(s, maxPx, font) {
+          if (measure(s, font) <= maxPx) return s;
+          while (s.length > 1 && measure(s + '…', font) > maxPx) s = s.slice(0, -1);
+          return s + '…';
+        }
+
+        // ── Background ──────────────────────────────────────────────────
+        box(0, 0, W, H, C_BG);
+
+        // ── Header ───────────────────────────────────────────────────────
+        txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
+        const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        txt(`${sorted.length} item${sorted.length === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
+            '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
+        box(PAD, 50, W - PAD * 2, 1, C_DIV);
+
+        // ── Rows ─────────────────────────────────────────────────────────
+        shown.forEach((item, i) => {
+          const ry     = HEADER_H + i * ROW_H;
+          const isTop3 = i < 3;
+          const accent = isTop3 ? RANK_COLORS[i] : C_ACCENT;
+
+          if (i % 2 === 1) box(0, ry, W, ROW_H, C_ROW);
+
+          // Rank number
+          const rankFont = isTop3 ? '900 20px system-ui,Arial,sans-serif' : '800 16px system-ui,Arial,sans-serif';
+          txt(`#${i + 1}`, PAD, ry + ROW_H / 2 + 6, rankFont, isTop3 ? accent : C_LABEL, 'left');
+
+          // Thumbnail — rounded square, cover-fit, placeholder mark if none
+          const thumbSize = 38;
+          const thumbX    = PAD + 44;
+          const thumbY    = ry + (ROW_H - thumbSize) / 2;
+          const img = thumbs[i];
+          if (img) {
+            ctx.save();
+            const rr = 6;
+            ctx.beginPath();
+            ctx.moveTo(thumbX + rr, thumbY);
+            ctx.arcTo(thumbX + thumbSize, thumbY, thumbX + thumbSize, thumbY + thumbSize, rr);
+            ctx.arcTo(thumbX + thumbSize, thumbY + thumbSize, thumbX, thumbY + thumbSize, rr);
+            ctx.arcTo(thumbX, thumbY + thumbSize, thumbX, thumbY, rr);
+            ctx.arcTo(thumbX, thumbY, thumbX + thumbSize, thumbY, rr);
+            ctx.closePath();
+            ctx.clip();
+            const scale = Math.max(thumbSize / img.naturalWidth, thumbSize / img.naturalHeight);
+            const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+            ctx.drawImage(img, thumbX + (thumbSize - dw) / 2, thumbY + (thumbSize - dh) / 2, dw, dh);
+            ctx.restore();
+          } else {
+            roundBox(thumbX, thumbY, thumbSize, thumbSize, 6, '#1c1c24');
+            txt('◈', thumbX + thumbSize / 2, thumbY + thumbSize / 2 + 6, '18px system-ui,sans-serif', C_DIM, 'center');
+          }
+
+          // Name + mini score bar
+          const nameX    = thumbX + thumbSize + 14;
+          const scoreStr = overallScore(item).toFixed(1);
+          const nameMaxW = W - PAD - nameX - measure(scoreStr, '800 16px system-ui,Arial,sans-serif') - 50;
+          const nameFont = '700 15px system-ui,-apple-system,Arial,sans-serif';
+          txt(trunc(item.name, nameMaxW, nameFont), nameX, ry + ROW_H / 2 - 3, nameFont, C_WHITE, 'left');
+
+          const barY = ry + ROW_H / 2 + 8;
+          const pct  = statMax > 0 ? Math.min(overallScore(item) / statMax, 1) : 0;
+          roundBox(nameX, barY, nameMaxW, 4, 2, C_TRACK);
+          if (pct > 0) roundBox(nameX, barY, Math.max(nameMaxW * pct, 6), 4, 2, accent);
+
+          // Score, right-aligned
+          txt(scoreStr, W - PAD, ry + ROW_H / 2 + 4, '800 16px system-ui,Arial,sans-serif', accent, 'right');
+        });
+
+        // ── Footer ───────────────────────────────────────────────────────
+        const footerTop = HEADER_H + shown.length * ROW_H;
+        box(PAD, footerTop, W - PAD * 2, 1, C_DIV);
+        if (overflow > 0) {
+          txt(`+ ${overflow} more item${overflow === 1 ? '' : 's'} not shown`, PAD, footerTop + 20,
+              '600 11px system-ui,Arial,sans-serif', C_LABEL, 'left');
+        }
+        txt('Made with ◈ Axis', W - PAD, H - 12, '500 10px system-ui,Arial,sans-serif', C_DIM, 'right');
+
+        // ── Download ─────────────────────────────────────────────────────
+        const a = document.createElement('a');
+        a.download = `axis_ranking_${new Date().toISOString().slice(0, 10)}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+        showToast('Leaderboard image saved.');
       }
     }
 
