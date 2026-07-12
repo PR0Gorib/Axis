@@ -2368,6 +2368,40 @@
 
     #empty p {
       font-size: .88rem;
+      max-width: 360px;
+    }
+
+    #empty-steps {
+      display: flex;
+      gap: 22px;
+      margin: 6px 0 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .empty-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .78rem;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .empty-step span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: .78rem;
+      flex-shrink: 0;
     }
 
     /* ── TOAST ── */
@@ -4339,11 +4373,7 @@
     </div>
   </div>
   <div id="grid"></div>
-  <div id="empty">
-    <h2>Nothing to compare yet</h2>
-    <p>Click "+ Add Item" to start, or add categories via the ☰ menu.</p>
-    <button class="btn primary" onclick="openAddModal()">+ Add First Item</button>
-  </div>
+  <div id="empty"></div>
 
   <!-- SIDE PANEL -->
   <div id="panel-overlay" onclick="closePanel()"></div>
@@ -4543,9 +4573,9 @@
         <div class="settings-section">
           <div class="settings-section-title">About</div>
           <div id="settings-about">
-            <div id="settings-about-version">Axis vX.X.X</div>
+            <div id="settings-about-version">Axis v1.3.0</div>
             <div id="settings-about-desc">A general purpose comparison &amp; ranking tool.</div>
-            <div id="settings-about-credit">Made by PR0Gorib</div>
+            <div id="settings-about-credit">Made with ❤️ by PR0Gorib</div>
             <div id="settings-about-links">
               <a href="https://github.com/PR0Gorib/Axis/" target="_blank" rel="noopener noreferrer">⭐ View on GitHub</a>
               <a href="https://github.com/PR0Gorib/Axis/releases" target="_blank" rel="noopener noreferrer">⬇ Releases</a>
@@ -5232,6 +5262,31 @@
       btn?.classList.remove('active');
     }
 
+    // Two-step onboarding for a brand new install: guides toward adding a
+    // category first (the thing Axis actually needs to be useful), then
+    // toward adding the first item once categories exist.
+    function renderEmptyState() {
+      const empty = document.getElementById('empty');
+      if (!categories.length) {
+        empty.innerHTML = `
+          <h2>👋 Welcome to Axis</h2>
+          <p>Axis compares things using categories you define — like Speed, Price, or Rating. Add a category to get started, or open Categories to load a ready-made starter template.</p>
+          <div id="empty-steps">
+            <div class="empty-step"><span>1</span>Add a category</div>
+            <div class="empty-step"><span>2</span>Add an item</div>
+            <div class="empty-step"><span>3</span>Compare &amp; rank</div>
+          </div>
+          <button class="btn primary" onclick="openCatModal()">+ Add Your First Category</button>
+        `;
+      } else {
+        empty.innerHTML = `
+          <h2>🎉 Categories ready</h2>
+          <p>Now add your first item to start ranking and comparing.</p>
+          <button class="btn primary" onclick="openAddModal()">+ Add First Item</button>
+        `;
+      }
+    }
+
     function renderGrid() {
       const grid = document.getElementById('grid');
       const empty = document.getElementById('empty');
@@ -5240,6 +5295,7 @@
       const filtered = getFilteredItems();
 
       if (!items.length) {
+        renderEmptyState();
         empty.style.display = 'flex';
         return;
       }
@@ -6697,6 +6753,21 @@
     function loadTemplates() {
       try { const r = localStorage.getItem('axis_tpl'); if (r) templates = JSON.parse(r); }
       catch (e) { templates = {}; }
+      _seedStarterTemplateOnce();
+    }
+
+    // Gives brand new installs a one-click way to see the category/template
+    // system in action instead of facing a totally blank slate. Only ever
+    // runs once per install — tracked by a flag, not by "is templates empty"
+    // — so it doesn't come back if someone deletes the starter template.
+    function _seedStarterTemplateOnce() {
+      try {
+        if (localStorage.getItem('axis_seeded_starter')) return;
+        localStorage.setItem('axis_seeded_starter', '1');
+        if (Object.keys(templates).length) return; // don't clobber existing templates
+        templates['Video Games'] = ['Graphics', 'Story', 'Gameplay', 'Replayability'];
+        saveTemplatesStore();
+      } catch (e) { /* silent — onboarding nicety, not critical */ }
     }
     function saveTemplatesStore() {
       try { localStorage.setItem('axis_tpl', JSON.stringify(templates)); } catch (e) { }
@@ -7255,7 +7326,7 @@
         box(0, 0, W, H, C_BG);
 
         // ── Header ───────────────────────────────────────────────────────
-        txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
+        txt('🏆 AXIS RANKING', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
         const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
         txt(`${sorted.length} item${sorted.length === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
             '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
