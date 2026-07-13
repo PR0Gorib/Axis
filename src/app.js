@@ -2204,6 +2204,8 @@
         localStorage.setItem('axis_seeded_starter', '1');
         if (Object.keys(templates).length) return; // don't clobber existing templates
         templates['Video Games'] = ['Graphics', 'Story', 'Gameplay', 'Replayability'];
+        templates['Movies']      = ['Acting', 'Plot', 'Visuals', 'Rewatchability'];
+        templates['Restaurants'] = ['Taste', 'Price', 'Service', 'Ambiance'];
         saveTemplatesStore();
       } catch (e) { /* silent — onboarding nicety, not critical */ }
     }
@@ -2764,7 +2766,7 @@
         box(0, 0, W, H, C_BG);
 
         // ── Header ───────────────────────────────────────────────────────
-        txt('🏆 AXIS RANKING', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
+        txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
         const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
         txt(`${sorted.length} item${sorted.length === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
             '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
