@@ -130,6 +130,8 @@ The built installer/binary will be under `src-tauri/target/release/`.
 Axis/
 ├── src/
 │   ├── index.html
+│   ├── styles.css
+│   ├── app.js
 │   ├── storage.js
 │   └── tauri-close-guard.js
 ├── src-tauri/
