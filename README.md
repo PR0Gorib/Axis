@@ -64,14 +64,15 @@ Grab the latest build for your platform from the **[Releases page](https://githu
 - 📈 Radar & bar chart visualizations
 - 🏆 Dynamic rankings, podiums & score tiers
 - 🖼️ Advanced image manager (up to 5 images per item)
-- 💾 Automatic backups & restore manager
-- 🧮 Bulk stat editing tools
-- ⌨️ Keyboard shortcuts
-- ⚙️ Centralized settings panel
+- 📷 Share items and rankings as images
+- 📥 CSV, JSON & ZIP import/export support
 - 🔍 Search, tags & advanced filtering
-- 📋 Category templates
-- 📤 Beautiful Share as Image exports
+- 🧮 Bulk stat editing tools
+- 📋 Starter category templates
+- 💾 Automatic backups & restore manager
+- ⚙️ Centralized settings panel
 - 📌 Favorites / pinned items
+- ⌨️ Keyboard shortcuts
 - 🌙 Dark & Light themes
 - 🖥️ Native desktop app via Tauri
 - 🔒 Fully offline & privacy-friendly
