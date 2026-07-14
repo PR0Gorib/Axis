@@ -2843,6 +2843,194 @@
       }
     }
 
+    // ── STATIC HTML EXPORT ───────────────────────────────
+    // Generates one fully self-contained .html file — inline CSS, base64
+    // images, zero external requests, zero runtime JavaScript. Opens
+    // identically in any browser, anywhere, forever, with no dependency on
+    // Axis itself. Everything (chart bars included) is computed once here
+    // and baked into fixed inline styles, matching shareItemAsImage's
+    // "always the same fixed dark palette" philosophy so a shared page
+    // looks consistent regardless of the sender's or viewer's app theme.
+    function exportStaticHTML() {
+      if (!items.length) { showToast('No items to export yet.', true); return; }
+      if (!categories.length) { showToast('Add a category first — a ranking needs at least one.', true); return; }
+
+      const sorted = [...items].sort((a, b) => overallScore(b) - overallScore(a));
+      const RANK_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
+
+      // ── Category averages — purely descriptive, computed once ──────────
+      const catAverages = categories.map(cat => {
+        const vals = items.map(it => it.stats?.[cat] ?? 0);
+        const avg  = vals.reduce((a, b) => a + b, 0) / vals.length;
+        return { cat, avg };
+      });
+
+      const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+      // ── Category averages chart — plain HTML/CSS bars, no runtime JS ───
+      const avgChartHtml = catAverages.map(({ cat, avg }) => {
+        const pct = statMax > 0 ? Math.min(avg / statMax, 1) * 100 : 0;
+        return `
+        <div class="avg-row">
+          <div class="avg-label">${esc(cat)}</div>
+          <div class="avg-track"><div class="avg-fill" style="width:${pct.toFixed(1)}%"></div></div>
+          <div class="avg-val">${avg.toFixed(1)}</div>
+        </div>`;
+      }).join('');
+
+      // ── Ranked item rows ─────────────────────────────────────────────
+      const rowsHtml = sorted.map((item, i) => {
+        const isTop3   = i < 3;
+        const rankCol  = isTop3 ? RANK_COLORS[i] : 'var(--muted)';
+        const score    = overallScore(item);
+        const src      = axisImgSrc(item.img);
+        const thumbHtml = src
+          ? `<img class="item-thumb" src="${src}" alt="">`
+          : `<div class="item-thumb item-thumb-ph">◈</div>`;
+
+        const tagsHtml = (item.tags || []).length
+          ? `<div class="item-tags">${item.tags.map(t => `<span class="tag-chip">${esc(t)}</span>`).join('')}</div>`
+          : '';
+
+        const bioHtml = item.bio
+          ? `<div class="item-bio">${esc(item.bio)}</div>`
+          : '';
+
+        const statsHtml = categories.map(cat => {
+          const v   = item.stats?.[cat] ?? 0;
+          const pct = statMax > 0 ? Math.min(v / statMax, 1) * 100 : 0;
+          return `
+            <div class="stat-row">
+              <div class="stat-label">${esc(cat)}</div>
+              <div class="stat-track"><div class="stat-fill" style="width:${pct.toFixed(1)}%"></div></div>
+              <div class="stat-val">${v}</div>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="item-card">
+          <div class="item-card-head">
+            <div class="rank-num" style="color:${rankCol}">#${i + 1}</div>
+            ${thumbHtml}
+            <div class="item-card-title">
+              <div class="item-name">${esc(item.name)}</div>
+              ${tagsHtml}
+            </div>
+            <div class="item-score" style="color:${isTop3 ? rankCol : 'var(--accent)'}">${score.toFixed(1)}<span>/${statMax}</span></div>
+          </div>
+          ${bioHtml}
+          <div class="item-stats">${statsHtml}</div>
+        </div>`;
+      }).join('');
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axis Ranking — ${esc(sorted.length)} items</title>
+<style>
+  :root {
+    --bg: #0d0d0f; --surface: #16161a; --border: #2a2a32;
+    --accent: #d94f5c; --accent2: #4ae8c9;
+    --text: #e8e8ec; --muted: #6b6b7a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    padding: 32px 20px 60px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 {
+    font-size: 1.9rem; font-weight: 800; letter-spacing: -.01em;
+    background: linear-gradient(110deg, var(--accent) 0%, #f2f2f2 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header p { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+
+  section { margin-bottom: 32px; }
+  .section-title {
+    font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+
+  .avg-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .avg-label { width: 120px; flex-shrink: 0; font-size: .82rem; font-weight: 600; }
+  .avg-track { flex: 1; height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+  .avg-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .avg-val { width: 34px; text-align: right; font-size: .8rem; font-weight: 700; color: var(--accent2); flex-shrink: 0; }
+
+  .item-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 10px;
+  }
+  .item-card-head { display: flex; align-items: center; gap: 12px; }
+  .rank-num { font-weight: 900; font-size: 1.1rem; width: 32px; flex-shrink: 0; }
+  .item-thumb {
+    width: 44px; height: 44px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--bg);
+  }
+  .item-thumb-ph { display: flex; align-items: center; justify-content: center; color: var(--border); font-size: 1.2rem; }
+  .item-card-title { flex: 1; min-width: 0; }
+  .item-name { font-weight: 700; font-size: 1rem; }
+  .item-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .tag-chip {
+    font-size: .66rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase;
+    color: var(--accent); background: rgba(217,79,92,.12); border: 1px solid rgba(217,79,92,.25);
+    padding: 1px 6px; border-radius: 3px;
+  }
+  .item-score { font-weight: 800; font-size: 1.2rem; flex-shrink: 0; }
+  .item-score span { font-size: .7rem; font-weight: 500; opacity: .6; }
+  .item-bio {
+    font-size: .82rem; color: var(--muted); line-height: 1.5; margin: 10px 0 4px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .item-stats { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .stat-row { display: flex; align-items: center; gap: 10px; }
+  .stat-label { width: 110px; flex-shrink: 0; font-size: .72rem; color: var(--muted); }
+  .stat-track { flex: 1; height: 5px; border-radius: 3px; background: var(--bg); overflow: hidden; }
+  .stat-fill { height: 100%; background: var(--accent); }
+  .stat-val { width: 30px; text-align: right; font-size: .74rem; font-weight: 700; flex-shrink: 0; }
+
+  footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
+  footer p { font-size: .74rem; color: var(--muted); letter-spacing: .02em; }
+  footer a { color: var(--accent2); text-decoration: none; border-bottom: 1px solid rgba(74,232,201,.3); }
+
+  @media (max-width: 480px) {
+    .item-card-head { flex-wrap: wrap; }
+    .stat-label { width: 84px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>◈ Axis Ranking</h1>
+      <p>${esc(sorted.length)} item${sorted.length === 1 ? '' : 's'} · ${esc(dateStr)}</p>
+    </header>
+
+    <section>
+      <div class="section-title">Category Averages</div>
+      ${avgChartHtml}
+    </section>
+
+    <section>
+      <div class="section-title">Ranking</div>
+      ${rowsHtml}
+    </section>
+
+    <footer>
+      <p>Made with ◈ <a href="https://github.com/PR0Gorib/Axis/" target="_blank" rel="noopener noreferrer">Axis</a> — a general purpose comparison &amp; ranking tool</p>
+    </footer>
+  </div>
+</body>
+</html>`;
+
+      dl(new Blob([html], { type: 'text/html' }), `axis_ranking_${new Date().toISOString().slice(0, 10)}.html`);
+      showToast('Shareable page saved.');
+    }
+
     // ── KEYBOARD ──────────────────────────────────────
     // True while focus is in a text field / textarea / contenteditable —
     // shortcuts below must not fire while the person is just typing.
