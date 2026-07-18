@@ -4,10 +4,16 @@
  *
  * Directory layout on disk:
  *   %APPDATA%\Axis\
- *   ├── data.json          item + category data (image refs, not base64)
- *   ├── settings.json      theme / statMax / viewMode preferences
- *   ├── images\            one JPEG per item image
- *   └── backups\           ZIP snapshots, auto-pruned to 10 most recent
+ *   ├── projects.json      manifest: { activeProjectId, projects: [{id,name,createdAt,lastOpenedAt}] }
+ *   ├── settings.json      theme / statMax / viewMode — GLOBAL, shared by every project
+ *   └── projects\
+ *       └── <project-id>\
+ *           ├── data.json      this project's items + categories (image refs, not base64)
+ *           ├── images\        one JPEG per item image, this project only
+ *           └── backups\       ZIP snapshots for this project, auto-pruned to 10 most recent
+ *
+ * Category templates (axis_tpl) live in localStorage, not here — they're
+ * intentionally global across all projects, same as settings.json.
  *
  * How images work:
  *   IN MEMORY  → item.img / item.img2 / item.img3 / item.img4 / item.img5 = "data:image/jpeg;base64,..."
@@ -16,6 +22,13 @@
  *   On save    → base64 strings are written as files, replaced with names
  *   Backups    → snapshot whatever is CURRENTLY on disk (read-only), so they
  *                never race with saveData() writing new image files
+ *
+ * How projects work:
+ *   _dataDir / _imagesDir / _backupsDir always point at whichever project is
+ *   CURRENTLY ACTIVE — every existing function (saveData, loadData, createBackup,
+ *   etc.) reads those same three variables unchanged. Switching the active
+ *   project just repoints them via _applyActiveProjectPaths() and reloads —
+ *   none of the read/write functions themselves needed to change.
  *
  * Requires (in capabilities/default.json):
  *   "fs:allow-read-file", "fs:allow-write-file",
@@ -29,9 +42,16 @@
 const AxisStorage = (() => {
 
   // ── Internal state ────────────────────────────────────────────────────────
-  let _dataDir    = null;  // %APPDATA%\Axis
-  let _imagesDir  = null;  // %APPDATA%\Axis\images
-  let _backupsDir = null;  // %APPDATA%\Axis\backups
+  let _rootDir        = null;  // %APPDATA%\Axis
+  let _projectsRootDir = null; // %APPDATA%\Axis\projects
+  let _activeProjectId = null;
+
+  // These three always point at the CURRENTLY ACTIVE project's folders.
+  // Every existing read/write function below references these unchanged —
+  // only _applyActiveProjectPaths() ever reassigns them.
+  let _dataDir    = null;  // %APPDATA%\Axis\projects\<id>
+  let _imagesDir  = null;  // %APPDATA%\Axis\projects\<id>\images
+  let _backupsDir = null;  // %APPDATA%\Axis\projects\<id>\backups
   let _ready      = false;
   const MAX_BACKUPS = 10;
 
@@ -54,22 +74,153 @@ const AxisStorage = (() => {
     }
   }
 
+  // ── PATH HELPERS FOR PROJECTS ────────────────────────────────────────────
+  function _slugify(name) {
+    const slug = String(name || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return slug || 'project';
+  }
+
+  function _makeProjectId(name) {
+    // slug + short random suffix so two projects named the same don't collide
+    const rand = Math.random().toString(36).slice(2, 6);
+    return `${_slugify(name)}_${rand}`;
+  }
+
+  async function _loadManifest() {
+    try {
+      const p = await join(_rootDir, 'projects.json');
+      if (!await fs().exists(p)) return { activeProjectId: null, projects: [] };
+      const m = JSON.parse(await fs().readTextFile(p));
+      return { activeProjectId: m.activeProjectId || null, projects: m.projects || [] };
+    } catch(e) { return { activeProjectId: null, projects: [] }; }
+  }
+
+  async function _saveManifest(manifest) {
+    try {
+      await fs().writeTextFile(await join(_rootDir, 'projects.json'), JSON.stringify(manifest, null, 2));
+      return true;
+    } catch(e) { console.error('[AxisStorage] _saveManifest failed:', e); return false; }
+  }
+
+  // Repoints _dataDir/_imagesDir/_backupsDir at the given project and makes
+  // sure its folders exist. This is the ONLY place those three variables
+  // get reassigned — every save/load/backup function below is unaware
+  // projects even exist, it just reads whatever they currently point to.
+  async function _applyActiveProjectPaths(id) {
+    const projDir = await join(_projectsRootDir, id);
+    _dataDir    = projDir;
+    _imagesDir  = await join(projDir, 'images');
+    _backupsDir = await join(projDir, 'backups');
+    await ensureDir(_dataDir);
+    await ensureDir(_imagesDir);
+    await ensureDir(_backupsDir);
+    _activeProjectId = id;
+  }
+
+  // One-time migration for installs updating from the single-list version:
+  // if projects.json doesn't exist yet but an old root-level data.json does,
+  // create a "My Comparisons" project and copy the old data.json, images,
+  // and backups into it. The old root files are left in place afterward
+  // (unused, but harmless) rather than deleted, so nothing is lost even if
+  // this is interrupted partway through.
+  async function _migrateToProjectsOnce(manifest) {
+    if (manifest.projects.length) return manifest; // already has projects, nothing to do
+
+    const oldDataPath = await join(_rootDir, 'data.json');
+    const hadOldData   = await fs().exists(oldDataPath);
+
+    const name = 'My Comparisons';
+    const id   = _makeProjectId(name);
+    const projDir   = await join(_projectsRootDir, id);
+    const projImages  = await join(projDir, 'images');
+    const projBackups = await join(projDir, 'backups');
+    await ensureDir(projDir);
+    await ensureDir(projImages);
+    await ensureDir(projBackups);
+
+    if (hadOldData) {
+      try {
+        const text = await fs().readTextFile(oldDataPath);
+        await fs().writeTextFile(await join(projDir, 'data.json'), text);
+      } catch(e) { console.error('[AxisStorage] migration: copying data.json failed:', e); }
+
+      const oldImages = await join(_rootDir, 'images');
+      try {
+        if (await fs().exists(oldImages)) {
+          const entries = await fs().readDir(oldImages);
+          for (const e of entries) {
+            if (!e.name) continue;
+            try {
+              const bytes = await fs().readFile(await join(oldImages, e.name));
+              await fs().writeFile(await join(projImages, e.name), bytes);
+            } catch(_) { /* skip unreadable file */ }
+          }
+        }
+      } catch(e) { /* no old images dir — fine */ }
+
+      const oldBackups = await join(_rootDir, 'backups');
+      try {
+        if (await fs().exists(oldBackups)) {
+          const entries = await fs().readDir(oldBackups);
+          for (const e of entries) {
+            if (!e.name?.endsWith('.zip')) continue;
+            try {
+              const bytes = await fs().readFile(await join(oldBackups, e.name));
+              await fs().writeFile(await join(projBackups, e.name), bytes);
+            } catch(_) { /* skip unreadable file */ }
+          }
+        }
+      } catch(e) { /* no old backups dir — fine */ }
+    } else {
+      // Genuinely fresh install — write an empty data.json so this project
+      // behaves identically to any other from the very first load.
+      await fs().writeTextFile(await join(projDir, 'data.json'), JSON.stringify({ items: [], categories: [] }, null, 2));
+    }
+
+    const now = Date.now();
+    manifest.projects = [{ id, name, createdAt: now, lastOpenedAt: now }];
+    manifest.activeProjectId = id;
+    await _saveManifest(manifest);
+    return manifest;
+  }
+
   // ── INIT ─────────────────────────────────────────────────────────────────
   /**
-   * Create directory structure on first run.
-   * Call once before any other method.
-   * Safe to call multiple times (idempotent).
+   * Create directory structure, resolve (or migrate) the project manifest,
+   * and activate whichever project should be current. Call once before any
+   * other method. Safe to call multiple times (idempotent).
    */
   async function init() {
     if (!isTauri()) { _ready = true; return false; }
     try {
       const appData = await path().appDataDir();
-      _dataDir    = await join(appData, 'Axis');
-      _imagesDir  = await join(_dataDir, 'images');
-      _backupsDir = await join(_dataDir, 'backups');
-      await ensureDir(_dataDir);
-      await ensureDir(_imagesDir);
-      await ensureDir(_backupsDir);
+      _rootDir         = await join(appData, 'Axis');
+      _projectsRootDir = await join(_rootDir, 'projects');
+      await ensureDir(_rootDir);
+      await ensureDir(_projectsRootDir);
+
+      let manifest = await _loadManifest();
+      manifest = await _migrateToProjectsOnce(manifest);
+
+      // Defensive fallback — should be unreachable given the migration
+      // above always leaves at least one project, but never crash on init.
+      if (!manifest.projects.length) {
+        const id = _makeProjectId('My Comparisons');
+        await ensureDir(await join(_projectsRootDir, id));
+        manifest.projects = [{ id, name: 'My Comparisons', createdAt: Date.now(), lastOpenedAt: Date.now() }];
+        manifest.activeProjectId = id;
+        await _saveManifest(manifest);
+      }
+
+      const activeId = manifest.projects.some(p => p.id === manifest.activeProjectId)
+        ? manifest.activeProjectId
+        : manifest.projects[0].id;
+
+      await _applyActiveProjectPaths(activeId);
       _ready = true;
       return true;
     } catch(e) {
@@ -160,8 +311,6 @@ const AxisStorage = (() => {
         if (copy.img3?.startsWith('data:')) copy.img3 = await saveImage(copy.img3, copy.id + '_3');
         if (copy.img4?.startsWith('data:')) copy.img4 = await saveImage(copy.img4, copy.id + '_4');
         if (copy.img5?.startsWith('data:')) copy.img5 = await saveImage(copy.img5, copy.id + '_5');
-        if (copy.img4?.startsWith('data:')) copy.img4 = await saveImage(copy.img4, copy.id + '_4');
-        if (copy.img5?.startsWith('data:')) copy.img5 = await saveImage(copy.img5, copy.id + '_5');
         return copy;
       }));
       const json = JSON.stringify({ items: serializable, categories }, null, 2);
@@ -199,8 +348,6 @@ const AxisStorage = (() => {
         if (item.img3 && !item.img3.startsWith('data:')) item.img3 = await loadImage(item.img3) || item.img3;
         if (item.img4 && !item.img4.startsWith('data:')) item.img4 = await loadImage(item.img4) || item.img4;
         if (item.img5 && !item.img5.startsWith('data:')) item.img5 = await loadImage(item.img5) || item.img5;
-        if (item.img4 && !item.img4.startsWith('data:')) item.img4 = await loadImage(item.img4) || item.img4;
-        if (item.img5 && !item.img5.startsWith('data:')) item.img5 = await loadImage(item.img5) || item.img5;
         return item;
       }));
       return { items, categories: d.categories || [] };
@@ -226,7 +373,7 @@ const AxisStorage = (() => {
     }
     try {
       await fs().writeTextFile(
-        await join(_dataDir, 'settings.json'),
+        await join(_rootDir, 'settings.json'),
         JSON.stringify(settings, null, 2)
       );
       return true;
@@ -251,7 +398,7 @@ const AxisStorage = (() => {
       } catch(e) { return defaults; }
     }
     try {
-      const filePath = await join(_dataDir, 'settings.json');
+      const filePath = await join(_rootDir, 'settings.json');
       if (!await fs().exists(filePath)) return defaults;
       return { ...defaults, ...JSON.parse(await fs().readTextFile(filePath)) };
     } catch(e) { return defaults; }
@@ -366,6 +513,149 @@ const AxisStorage = (() => {
     }
   }
 
+  // ── PROJECTS ──────────────────────────────────────────────────────────────
+  /**
+   * List every project plus which one is currently active.
+   * Returns { activeProjectId, projects: [{id, name, createdAt, lastOpenedAt}] }
+   * sorted by most recently opened first.
+   */
+  async function listProjects() {
+    if (!isTauri()) return { activeProjectId: null, projects: [] };
+    const manifest = await _loadManifest();
+    manifest.projects.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
+    return manifest;
+  }
+
+  function getActiveProjectId() { return _activeProjectId; }
+
+  /**
+   * Resolves the active project's display name, for building export
+   * filenames like "games_export.zip" from a project named "Games".
+   * Falls back to 'axis' in browser mode or if nothing is active yet.
+   */
+  async function _getActiveProjectName() {
+    if (!isTauri() || !_activeProjectId) return 'axis';
+    try {
+      const manifest = await _loadManifest();
+      const project = manifest.projects.find(p => p.id === _activeProjectId);
+      return project ? project.name : 'axis';
+    } catch(e) { return 'axis'; }
+  }
+
+  /**
+   * Create a new, empty project and add it to the manifest. Does NOT
+   * switch to it automatically — call setActiveProject(id) afterward if
+   * that's the desired behaviour (the UI layer decides).
+   * Returns the new { id, name, createdAt, lastOpenedAt } or null on failure.
+   */
+  async function createProject(name) {
+    if (!isTauri()) return null;
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return null;
+    try {
+      const id = _makeProjectId(trimmed);
+      const projDir = await join(_projectsRootDir, id);
+      await ensureDir(projDir);
+      await ensureDir(await join(projDir, 'images'));
+      await ensureDir(await join(projDir, 'backups'));
+      await fs().writeTextFile(await join(projDir, 'data.json'), JSON.stringify({ items: [], categories: [] }, null, 2));
+
+      const manifest = await _loadManifest();
+      const now = Date.now();
+      const project = { id, name: trimmed, createdAt: now, lastOpenedAt: now };
+      manifest.projects.push(project);
+      await _saveManifest(manifest);
+      return project;
+    } catch(e) {
+      console.error('[AxisStorage] createProject failed:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Rename a project (display name only — its on-disk folder id never
+   * changes, so this can't collide with anything or break file paths).
+   */
+  async function renameProject(id, newName) {
+    if (!isTauri()) return false;
+    const trimmed = String(newName || '').trim();
+    if (!trimmed) return false;
+    try {
+      const manifest = await _loadManifest();
+      const project = manifest.projects.find(p => p.id === id);
+      if (!project) return false;
+      project.name = trimmed;
+      await _saveManifest(manifest);
+      return true;
+    } catch(e) {
+      console.error('[AxisStorage] renameProject failed:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Permanently delete a project's folder (data, images, backups — all of
+   * it) and remove it from the manifest. Refuses to delete the last
+   * remaining project, since Axis always needs at least one to be active.
+   * If the deleted project was the active one, switches active to whatever
+   * project is now first in the list and repoints storage paths at it.
+   * Returns { ok: true, newActiveId? } or { ok: false, reason }.
+   */
+  async function deleteProject(id) {
+    if (!isTauri()) return { ok: false, reason: 'not-tauri' };
+    try {
+      const manifest = await _loadManifest();
+      if (manifest.projects.length <= 1) return { ok: false, reason: 'last-project' };
+
+      const idx = manifest.projects.findIndex(p => p.id === id);
+      if (idx === -1) return { ok: false, reason: 'not-found' };
+
+      const projDir = await join(_projectsRootDir, id);
+      try { await fs().remove(projDir, { recursive: true }); }
+      catch(e) { console.error('[AxisStorage] deleteProject: folder removal failed:', e); }
+
+      manifest.projects.splice(idx, 1);
+
+      let newActiveId;
+      if (manifest.activeProjectId === id) {
+        newActiveId = manifest.projects[0].id;
+        manifest.activeProjectId = newActiveId;
+        await _applyActiveProjectPaths(newActiveId);
+      }
+
+      await _saveManifest(manifest);
+      return { ok: true, newActiveId };
+    } catch(e) {
+      console.error('[AxisStorage] deleteProject failed:', e);
+      return { ok: false, reason: 'error' };
+    }
+  }
+
+  /**
+   * Switch the active project — repoints _dataDir/_imagesDir/_backupsDir
+   * so every existing save/load/backup function immediately starts reading
+   * and writing the new project instead. Caller is responsible for calling
+   * loadData() afterward to actually get the new project's items/categories
+   * into memory (this function only flips which folder is "current").
+   */
+  async function setActiveProject(id) {
+    if (!isTauri()) return false;
+    try {
+      const manifest = await _loadManifest();
+      const project = manifest.projects.find(p => p.id === id);
+      if (!project) return false;
+
+      await _applyActiveProjectPaths(id);
+      project.lastOpenedAt = Date.now();
+      manifest.activeProjectId = id;
+      await _saveManifest(manifest);
+      return true;
+    } catch(e) {
+      console.error('[AxisStorage] setActiveProject failed:', e);
+      return false;
+    }
+  }
+
   // ── IMPORT ────────────────────────────────────────────────────────────────
   /**
    * Open native file dialog and import .json or .zip.
@@ -448,33 +738,34 @@ const AxisStorage = (() => {
   // ── EXPORT ────────────────────────────────────────────────────────────────
   /**
    * Export as JSON via native save dialog.
-   * Returns true on success, false on cancel/error.
+   * Returns the filename used on success, false on cancel/error.
    */
   async function exportJSON(items, categories) {
     const data = JSON.stringify({ items, categories }, null, 2);
+    const filename = `${_slugify(await _getActiveProjectName())}.json`;
     if (isTauri() && dlg()?.save) {
       try {
         const savePath = await dlg().save({
           title: 'Export Axis data',
-          defaultPath: 'axis.json',
+          defaultPath: filename,
           filters: [{ name: 'JSON', extensions: ['json'] }],
         });
         if (!savePath) return false;
         await fs().writeTextFile(savePath, data);
-        return true;
+        return filename;
       } catch(e) {
         console.error('[AxisStorage] exportJSON failed:', e);
         return false;
       }
     }
     // Browser fallback
-    _browserDownload(new Blob([data], { type: 'application/json' }), 'axis.json');
-    return true;
+    _browserDownload(new Blob([data], { type: 'application/json' }), filename);
+    return filename;
   }
 
   /**
    * Export as ZIP (data + images) via native save dialog.
-   * Returns true on success, false on cancel/error.
+   * Returns the filename used on success, false on cancel/error.
    */
   async function exportZip(items, categories) {
     try {
@@ -539,20 +830,21 @@ const AxisStorage = (() => {
       });
 
       const zipBytes = buildZip(entries);
+      const filename = `${_slugify(await _getActiveProjectName())}_export.zip`;
 
       if (isTauri() && dlg()?.save) {
         const savePath = await dlg().save({
           title: 'Export Axis data',
-          defaultPath: 'axis_export.zip',
+          defaultPath: filename,
           filters: [{ name: 'ZIP archive', extensions: ['zip'] }],
         });
         if (!savePath) return false;
         await fs().writeFile(savePath, zipBytes);
-        return true;
+        return filename;
       }
       // Browser fallback
-      _browserDownload(new Blob([zipBytes], { type: 'application/zip' }), 'axis_export.zip');
-      return true;
+      _browserDownload(new Blob([zipBytes], { type: 'application/zip' }), filename);
+      return filename;
     } catch(e) {
       console.error('[AxisStorage] exportZip failed:', e);
       return false;
@@ -737,6 +1029,15 @@ const AxisStorage = (() => {
     exportJSON,
     exportZip,
     migrateFromLocalStorage,
+    // project management — create/switch/rename/delete separate named
+    // comparison lists; see the "How projects work" note at the top of
+    // this file for how these interact with the save/load functions above
+    listProjects,
+    getActiveProjectId,
+    createProject,
+    renameProject,
+    deleteProject,
+    setActiveProject,
     // expose ZIP utils so index.html can use them too
     buildZip,
     parseZip,
