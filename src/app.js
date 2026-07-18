@@ -1,6 +1,7 @@
     // ── STATE ──────────────────────────────────────────
     let items = [];
     let categories = [];
+    let activeProject = { id: null, name: '' }; // currently open project — kept in sync with storage.js
     let currentSort = { cat: 'overall', dir: 'desc' };
     let searchQuery = '';
     let compareSet = new Set(); // ids selected for compare
@@ -25,7 +26,7 @@
     // These bridge the stub names used throughout the file
     // to the AxisStorage API defined in storage.js
 
-    let _sessionBackupDone = false;
+    let _backedUpProjectIds = new Set(); // which projects have had their session-start backup this session
 
     async function axisInit() {
       await AxisStorage.init();
@@ -59,11 +60,14 @@
     }
 
     async function axisSave(itemsArr, catsArr) {
-      // First save of the session → snapshot whatever's currently on disk
-      // BEFORE we overwrite it. Awaited so it can never race with saveData()
-      // writing new image files to the same paths.
-      if (!_sessionBackupDone && AxisStorage.isTauri) {
-        _sessionBackupDone = true;
+      // First save of THIS project this session → snapshot whatever's
+      // currently on disk BEFORE we overwrite it. Tracked per-project (not
+      // globally) so switching to a different project mid-session still
+      // gets its own first-change safety backup, exactly like it would if
+      // it were the only project you ever opened. Awaited so it can never
+      // race with saveData() writing new image files to the same paths.
+      if (!_backedUpProjectIds.has(activeProject.id) && AxisStorage.isTauri) {
+        _backedUpProjectIds.add(activeProject.id);
         try { await AxisStorage.createBackup(); } catch (e) { console.error('[Axis] backup failed:', e); }
       }
       try {
@@ -92,14 +96,127 @@
       AxisStorage.saveSettings({ ...current, ...partial }).catch(() => { });
     }
 
+    // ── PROJECTS ─────────────────────────────────────────
+    // A "project" is a separate, independently-saved comparison list (its
+    // own items, categories, images, backups) — e.g. "Games", "Movies",
+    // "Restaurants". Exactly one is active at a time; switching repoints
+    // storage.js at the new one and reloads items/categories into memory.
+    // Everything else (theme, stat scale, view mode, templates, incognito)
+    // stays global across every project, by design.
+
+    // Refreshes the cached { id, name } for whichever project is currently
+    // active. Call after init and after any create/rename/switch/delete.
+    async function axisRefreshActiveProject() {
+      try {
+        const { activeProjectId, projects } = await AxisStorage.listProjects();
+        const found = projects.find(p => p.id === activeProjectId);
+        activeProject = found ? { id: found.id, name: found.name } : { id: activeProjectId, name: '' };
+      } catch (e) {
+        console.error('[Axis] axisRefreshActiveProject failed:', e);
+      }
+      _updateHeaderProjectName();
+    }
+
+    async function axisListProjects() {
+      try { return await AxisStorage.listProjects(); }
+      catch (e) { console.error('[Axis] axisListProjects failed:', e); return { activeProjectId: null, projects: [] }; }
+    }
+
+    // Clears everything that's meaningful only within the PREVIOUS project's
+    // item set — stale selections, search text, filters, sort, and any open
+    // panel/modal — so nothing from one project bleeds into another. Global
+    // preferences (theme, statMax, viewMode, incognito, templates) are
+    // deliberately left untouched.
+    function _resetProjectScopedUIState() {
+      compareSet.clear();
+      renderCompareBar();
+      if (bulkEditMode) exitBulkEditMode();
+
+      searchQuery = '';
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) searchInput.value = '';
+
+      activeTagFilter = '';
+      currentSort = { cat: 'overall', dir: 'desc' };
+
+      scoreFilterMin = 0;
+      scoreFilterMax = statMax;
+      updateScoreFilterInputs();
+
+      closePanel();
+      closeModal();
+    }
+
+    // Loads whatever project is active in storage.js into memory and
+    // refreshes the UI. Shared by switch/create/delete below so they all
+    // end up in the exact same consistent state.
+    async function _loadActiveProjectIntoMemory() {
+      const loaded = await axisLoad();
+      items = loaded.items;
+      categories = loaded.categories;
+      await axisRefreshActiveProject();
+      _resetProjectScopedUIState();
+      render();
+    }
+
+    // Creates a new empty project and switches to it immediately — matches
+    // the expected "+ New Project" UX (you create one because you want to
+    // start using it, not to leave it sitting inactive).
+    async function axisCreateProject(name) {
+      const project = await AxisStorage.createProject(name);
+      if (!project) { showToast('Could not create the project.', true); return null; }
+      const switched = await AxisStorage.setActiveProject(project.id);
+      if (!switched) { showToast('Project created, but could not switch to it.', true); return project; }
+      await _loadActiveProjectIntoMemory();
+      showToast(`Switched to "${project.name}".`);
+      return project;
+    }
+
+    async function axisSwitchProject(id) {
+      if (id === activeProject.id) return true; // already active, nothing to do
+      const ok = await AxisStorage.setActiveProject(id);
+      if (!ok) { showToast('Could not switch projects.', true); return false; }
+      await _loadActiveProjectIntoMemory();
+      showToast(`Switched to "${activeProject.name}".`);
+      return true;
+    }
+
+    async function axisRenameProject(id, newName) {
+      const ok = await AxisStorage.renameProject(id, newName);
+      if (!ok) { showToast('Could not rename the project.', true); return false; }
+      if (id === activeProject.id) await axisRefreshActiveProject();
+      showToast('Project renamed.');
+      return true;
+    }
+
+    // Deletes a project outright — its data, images, and backups are gone,
+    // not just hidden. If the deleted project was the active one, storage.js
+    // has already switched to whatever project is now first in line; we
+    // just need to load that project's data into memory here.
+    async function axisDeleteProject(id) {
+      const result = await AxisStorage.deleteProject(id);
+      if (!result.ok) {
+        const msg = result.reason === 'last-project'
+          ? "Can't delete your only project — create another one first."
+          : 'Could not delete the project.';
+        showToast(msg, true);
+        return result;
+      }
+      if (result.newActiveId) {
+        await _loadActiveProjectIntoMemory();
+      }
+      showToast('Project deleted.');
+      return result;
+    }
+
     async function axisExportJSON(itemsArr, catsArr) {
-      const ok = await AxisStorage.exportJSON(itemsArr, catsArr);
-      return ok ? 'Exported → axis.json' : null; // null = cancelled
+      const filename = await AxisStorage.exportJSON(itemsArr, catsArr);
+      return filename ? `Exported → ${filename}` : null; // null = cancelled
     }
 
     async function axisExportZip(itemsArr, catsArr) {
-      const ok = await AxisStorage.exportZip(itemsArr, catsArr);
-      return ok ? 'Exported → axis_export.zip' : null;
+      const filename = await AxisStorage.exportZip(itemsArr, catsArr);
+      return filename ? `Exported → ${filename}` : null;
     }
 
     /**
@@ -1607,6 +1724,97 @@
       showToast(`Restored backup — ${items.length} item${items.length === 1 ? '' : 's'} loaded.`);
     }
 
+    // ── PROJECTS ─────────────────────────────────────────
+    async function openProjectsModal() {
+      document.getElementById('projects-modal-overlay').classList.add('open');
+      await renderProjectsList();
+    }
+    function closeProjectsModal() {
+      document.getElementById('projects-modal-overlay').classList.remove('open');
+    }
+
+    // Keeps the header's project name in sync with whichever project is
+    // actually active. Falls back to the original tagline text if nothing
+    // is loaded yet (e.g. very first paint, or non-Tauri browser mode).
+    function _updateHeaderProjectName() {
+      const el = document.getElementById('header-project-name');
+      if (!el) return;
+      el.textContent = activeProject.name || 'General purpose comparison & ranking tool';
+    }
+
+    function _formatProjectMeta(project) {
+      const ts = project.lastOpenedAt || project.createdAt;
+      if (!ts) return '';
+      const label = project.lastOpenedAt ? 'Opened' : 'Created';
+      const date  = new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      return `${label} ${date}`;
+    }
+
+    async function renderProjectsList() {
+      const list = document.getElementById('projects-list');
+      list.innerHTML = '<div class="project-empty">Loading…</div>';
+
+      if (!AxisStorage.isTauri) {
+        list.innerHTML = '<div class="project-empty">Projects are only available in the desktop app.</div>';
+        return;
+      }
+
+      const { activeProjectId, projects } = await axisListProjects();
+      if (!projects.length) {
+        list.innerHTML = '<div class="project-empty">No projects yet.</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      projects.forEach(project => {
+        const isActive = project.id === activeProjectId;
+        const row = document.createElement('div');
+        row.className = 'project-row' + (isActive ? ' active' : '');
+        const safeId   = esc(project.id).replace(/'/g, "\\'");
+        const safeName = esc(project.name).replace(/'/g, "\\'");
+
+        row.innerHTML = `
+          <div class="project-row-info">
+            <div class="project-row-name">${esc(project.name)}${isActive ? '<span class="project-active-badge">Active</span>' : ''}</div>
+            <div class="project-row-meta">${esc(_formatProjectMeta(project))}</div>
+          </div>
+          <div class="project-row-actions">
+            ${isActive ? '' : `<button class="project-btn open" onclick="axisSwitchProject('${safeId}').then(ok => { if (ok) closeProjectsModal(); else renderProjectsList(); })">Open</button>`}
+            <button class="project-btn rename" onclick="_renameProjectPrompt('${safeId}', '${safeName}')">✎</button>
+            <button class="project-btn delete" onclick="_deleteProjectPrompt('${safeId}', '${safeName}')">✕</button>
+          </div>`;
+        list.appendChild(row);
+      });
+    }
+
+    async function createNewProjectFromInput() {
+      const input = document.getElementById('project-new-input');
+      const name  = input.value.trim();
+      if (!name) { showToast('Enter a project name first.', true); return; }
+      const project = await axisCreateProject(name);
+      if (!project) return; // axisCreateProject already showed an error toast
+      input.value = '';
+      closeProjectsModal();
+    }
+
+    async function _renameProjectPrompt(id, currentName) {
+      const newName = prompt('Rename project:', currentName);
+      if (!newName || !newName.trim() || newName.trim() === currentName) return;
+      const ok = await axisRenameProject(id, newName.trim());
+      if (ok) { _updateHeaderProjectName(); await renderProjectsList(); }
+    }
+
+    async function _deleteProjectPrompt(id, name) {
+      const confirmed = confirm(
+        `Delete "${name}"?\n\n` +
+        'This permanently deletes its items, categories, images, and backups. ' +
+        'Export a copy first if you want to keep anything.'
+      );
+      if (!confirmed) return;
+      await axisDeleteProject(id);
+      await renderProjectsList();
+    }
+
     function openCatModal() {
       renderCatList();
       renderTplList();
@@ -3046,8 +3254,8 @@
     function _anyOverlayOpen() {
       const ids = [
         'modal-overlay', 'cat-modal-overlay', 'backup-modal-overlay',
-        'settings-modal-overlay', 'cmp-overlay', 'bulk-overlay',
-        'viewer-overlay', 'ham-drawer',
+        'settings-modal-overlay', 'projects-modal-overlay', 'cmp-overlay',
+        'bulk-overlay', 'viewer-overlay', 'ham-drawer',
       ];
       return ids.some(id => document.getElementById(id)?.classList.contains('open'));
     }
@@ -3055,7 +3263,7 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal();
-        closeSettingsModal();
+        closeSettingsModal(); closeProjectsModal();
         document.getElementById('viewer-overlay').classList.remove('open');
         if (bulkEditMode) exitBulkEditMode();
       }
@@ -3134,6 +3342,9 @@
       const loaded = await axisLoad();
       items = loaded.items;
       categories = loaded.categories;
+
+      // Which project is this? (name shown in header, used for export filenames)
+      await axisRefreshActiveProject();
 
       render();
     })();
