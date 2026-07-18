@@ -14,7 +14,7 @@
   <header>
     <div class="header-brand">
       <h1>◈ Axis</h1>
-      <span class="tagline">General purpose comparison &amp; ranking tool</span>
+      <span class="tagline" id="header-project-name">General purpose comparison &amp; ranking tool</span>
     </div>
     <div id="incognito-badge">👻 Incognito — data will not be saved</div>
     <div class="header-search">
@@ -47,6 +47,9 @@
     <div class="ham-section">
       <button class="ham-btn" onclick="openSettingsModal();closeHamMenu()">
         <span class="ham-icon">⚙</span> Settings
+      </button>
+      <button class="ham-btn" onclick="openProjectsModal();closeHamMenu()">
+        <span class="ham-icon">📁</span> Projects
       </button>
       <button class="ham-btn" onclick="openCatModal();closeHamMenu()">
         <span class="ham-icon">⊞</span> Categories
@@ -82,7 +85,7 @@
       <div class="ham-hint">When on, nothing is saved to disk. Data is cleared when you close the app.</div>
     </div>
 
-    <div id="ham-version">Axis v1.5.0</div>
+    <div id="ham-version">Axis v1.4.0</div>
   </div>
 
   <div id="toolbar">
@@ -342,7 +345,7 @@
         <div class="settings-section">
           <div class="settings-section-title">About</div>
           <div id="settings-about">
-            <div id="settings-about-version">Axis v1.5.0</div>
+            <div id="settings-about-version">Axis v1.4.0</div>
             <div id="settings-about-desc">A general purpose comparison &amp; ranking tool.</div>
             <div id="settings-about-credit">Made by PR0Gorib</div>
             <div id="settings-about-links">
@@ -352,6 +355,24 @@
           </div>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECTS MODAL -->
+  <div id="projects-modal-overlay">
+    <div id="projects-modal">
+      <div id="projects-modal-header">
+        <h2>📁 Projects</h2>
+        <button class="btn small" onclick="closeProjectsModal()">✕</button>
+      </div>
+      <div id="projects-modal-hint">
+        Each project keeps its own items, categories, images, and backups completely separate. Switch anytime — nothing is lost.
+      </div>
+      <div id="projects-list"></div>
+      <div id="projects-add-row">
+        <input type="text" id="project-new-input" placeholder="New project name..." onkeydown="if(event.key==='Enter')createNewProjectFromInput()">
+        <button class="btn primary small" onclick="createNewProjectFromInput()">+ Create</button>
       </div>
     </div>
   </div>
