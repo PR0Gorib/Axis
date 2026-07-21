@@ -466,6 +466,21 @@
       opacity: .55;
     }
 
+    .header-brand .project-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: .62rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #4ae8c9;
+      background: rgba(74, 232, 201, .12);
+      border: 1px solid rgba(74, 232, 201, .3);
+      border-radius: 3px;
+      padding: 1px 7px;
+      width: fit-content;
+      margin-top: 2px;
+    }
+
     .header-actions {
       display: flex;
       gap: 8px;

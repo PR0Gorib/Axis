@@ -1733,13 +1733,21 @@
       document.getElementById('projects-modal-overlay').classList.remove('open');
     }
 
-    // Keeps the header's project name in sync with whichever project is
-    // actually active. Falls back to the original tagline text if nothing
-    // is loaded yet (e.g. very first paint, or non-Tauri browser mode).
+    // Keeps the header's small project badge in sync with whichever project
+    // is actually active. This is a separate element from the tagline — the
+    // tagline text itself never changes, by design (see CLAUDE.md). The badge
+    // is hidden entirely when there's no active project name to show (e.g.
+    // very first paint, or non-Tauri browser mode where projects don't exist).
     function _updateHeaderProjectName() {
       const el = document.getElementById('header-project-name');
       if (!el) return;
-      el.textContent = activeProject.name || 'General purpose comparison & ranking tool';
+      if (activeProject.name) {
+        el.textContent = activeProject.name;
+        el.style.display = '';
+      } else {
+        el.textContent = '';
+        el.style.display = 'none';
+      }
     }
 
     function _formatProjectMeta(project) {
