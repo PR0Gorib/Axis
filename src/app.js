@@ -648,7 +648,7 @@
           item.stats[cat] = val;
         }
       });
-      await axisSave(items, categories);
+      if (!incognitoMode) await axisSave(items, categories);
       render();
       renderBulkEditBar();
       document.getElementById('bulk-edit-value').value = '';
@@ -1333,8 +1333,9 @@
         const col = document.createElement('div');
         col.className = 'cmp-col';
 
-        const imgHtml = item.img
-          ? `<img class="cmp-col-img" src="${esc(item.img)}" alt="${esc(item.name)}">`
+        const cmpSrc = axisImgSrc(item.img);
+        const imgHtml = cmpSrc
+          ? `<img class="cmp-col-img" src="${esc(cmpSrc)}" alt="${esc(item.name)}">`
           : `<div class="cmp-col-img-ph">◈</div>`;
 
         const score = overallScore(item);
@@ -1634,7 +1635,7 @@
       items = [];
       compareSet.clear();
       bulkEditSet.clear();
-      await axisSave(items, categories);
+      if (!incognitoMode) await axisSave(items, categories);
       render();
       closeSettingsModal();
       showToast(`Cleared ${n} item${n === 1 ? '' : 's'}.`);
@@ -1656,7 +1657,7 @@
       categories = [];
       compareSet.clear();
       bulkEditSet.clear();
-      await axisSave(items, categories);
+      if (!incognitoMode) await axisSave(items, categories);
       render();
       closeSettingsModal();
       showToast('Axis has been reset.');
@@ -1718,7 +1719,7 @@
 
       items      = data.items || [];
       categories = data.categories || [];
-      await axisSave(items, categories);
+      if (!incognitoMode) await axisSave(items, categories);
       render();
       closeBackupModal();
       showToast(`Restored backup — ${items.length} item${items.length === 1 ? '' : 's'} loaded.`);
