@@ -199,8 +199,6 @@
       border-bottom-color: var(--border);
     }
 
-    body.light
-
     body.light .stat-bar {
       background: var(--border);
     }
@@ -3277,12 +3275,6 @@
       position: relative;
     }
 
-    body.light
-
-    body.light
-
-    body.light
-
     /* ── PER-STAT NOTES ── */
     .stat-note-wrap {
       margin-top: 4px;
@@ -3398,7 +3390,6 @@
     /* Header bottom — very subtle accent line */
     header {
       border-bottom: 1px solid var(--border);
-      position: relative;
     }
 
     header::after {
