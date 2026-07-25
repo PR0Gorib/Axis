@@ -398,6 +398,41 @@
       min-height: 100vh;
     }
 
+    /* ── THEME SWITCH TRANSITION ──
+       Smooths dark/light toggling app-wide. Only touches background/border/
+       color/shadow — never `transform`, so it can't fight the hover and
+       FLIP-reorder transforms defined on individual elements (like .card). */
+    body, body *,
+    body *::before, body *::after {
+      transition-property: background-color, border-color, color, box-shadow, fill, stroke;
+      transition-duration: .25s;
+      transition-timing-function: ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body, body *, body *::before, body *::after {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* ── REORDER / FILTER ANIMATION (FLIP) ──
+       Applied by JS for one frame at a time: 'flip-move' transitions an
+       element's transform after its start position has been set inline,
+       so cards/rows glide to their new spot instead of jumping there. */
+    .flip-move {
+      transition: transform .35s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    /* New item appearing (added, or revealed by a filter) */
+    @keyframes card-enter {
+      from { opacity: 0; transform: scale(.92) translateY(6px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .card-enter {
+      animation: card-enter .3s cubic-bezier(.4, 0, .2, 1);
+    }
+
     #panel-bio {
       font-family: 'Barlow', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }
@@ -2386,6 +2421,32 @@
       border-bottom: 1px solid var(--border);
     }
 
+    #cmp-radar-wrap {
+      position: relative;
+    }
+
+    #cmp-radar-zoom-btn {
+      position: absolute;
+      top: 8px;
+      right: 4px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .72rem;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 3px;
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    #cmp-radar-zoom-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
     #cmp-radar-wrap.visible,
     #cmp-bars-wrap.visible {
       display: flex;
@@ -2431,6 +2492,70 @@
       color: var(--muted);
       text-align: center;
       padding: 20px 0;
+    }
+
+    /* ── RADAR ZOOM (full-screen) ── */
+    #radar-zoom-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .94);
+      z-index: 350;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #radar-zoom-overlay.open {
+      display: flex;
+    }
+
+    #radar-zoom-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    #radar-zoom-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #radar-zoom-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 24px;
+      overflow: auto;
+    }
+
+    #radar-zoom-canvas {
+      max-width: 100%;
+    }
+
+    #radar-zoom-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      justify-content: center;
+    }
+
+    #radar-zoom-legend .cmp-chart-legend-item {
+      font-size: .92rem;
+    }
+
+    #radar-zoom-legend .cmp-chart-legend-swatch {
+      width: 13px;
+      height: 13px;
     }
 
 

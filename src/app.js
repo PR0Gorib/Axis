@@ -535,6 +535,57 @@
       if (banner) banner.style.display = 'none';
     }
 
+    // ── FLIP REORDER ANIMATION ──────────────────────────
+    // Generic helper: call captureFlipState() right before a container's
+    // contents get rebuilt, then playFlipAnimation() right after. Elements
+    // keyed by [data-id] that already existed glide from their old spot to
+    // their new one; elements with no previous position play a fade/scale
+    // entrance instead (new item added, or one revealed by a filter).
+    // Elements that vanish (deleted, or hidden by a filter) don't need
+    // special handling — the survivors gliding into the gap already reads
+    // as the removal.
+    let _reducedMotion = false;
+    try { _reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { }
+
+    function captureFlipState(container) {
+      if (_reducedMotion || !container) return null;
+      const map = new Map();
+      container.querySelectorAll('[data-id]').forEach(el => {
+        map.set(el.dataset.id, el.getBoundingClientRect());
+      });
+      return map;
+    }
+
+    function playFlipAnimation(container, prevRects) {
+      if (_reducedMotion || !container || !prevRects || !prevRects.size) return;
+      container.querySelectorAll('[data-id]').forEach(el => {
+        const before = prevRects.get(el.dataset.id);
+        if (!before) {
+          // Wasn't on screen a moment ago — treat as a fresh entrance
+          el.classList.add('card-enter');
+          el.addEventListener('animationend', () => el.classList.remove('card-enter'), { once: true });
+          return;
+        }
+        const after = el.getBoundingClientRect();
+        const dx = before.left - after.left;
+        const dy = before.top - after.top;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return; // didn't actually move
+
+        el.style.transition = 'none';
+        el.style.transform  = `translate(${dx}px, ${dy}px)`;
+        // Force reflow so the browser registers the starting transform
+        // before we clear it, otherwise both changes get batched together
+        // and there's nothing to animate.
+        void el.offsetWidth;
+        el.classList.add('flip-move');
+        el.style.transform = '';
+        el.addEventListener('transitionend', () => {
+          el.classList.remove('flip-move');
+          el.style.transition = '';
+        }, { once: true });
+      });
+    }
+
     // ── HELPERS ────────────────────────────────────────
     function overallScore(item) {
       if (!categories.length) return 0;
@@ -865,16 +916,19 @@
       section.style.display = '';
       const sorted = [...items].sort((a, b) => overallScore(b) - overallScore(a));
       const list = document.getElementById('overall-list');
+      const prevRects = captureFlipState(list);
       list.innerHTML = '';
       sorted.forEach((item, i) => {
         const div = document.createElement('div');
         div.className = 'overall-item';
+        div.dataset.id = item.id;
         div.onclick = () => openPanel(item.id);
         div.innerHTML = `<div class="overall-rank">#${i + 1}</div>
       <div class="overall-name">${esc(item.name)}</div>
       <div class="overall-score">${overallScore(item).toFixed(1)}</div>`;
         list.appendChild(div);
       });
+      playFlipAnimation(list, prevRects);
     }
 
     function closeInsightsPanel() {
@@ -926,6 +980,7 @@
     function renderGrid() {
       const grid = document.getElementById('grid');
       const empty = document.getElementById('empty');
+      const prevRects = captureFlipState(grid);
       grid.innerHTML = '';
 
       const filtered = getFilteredItems();
@@ -941,7 +996,7 @@
       grid.classList.remove('list-mode');
       const sorted = getSortedItems(filtered);
 
-      if (viewMode === 'list') { renderListView(sorted); return; }
+      if (viewMode === 'list') { renderListView(sorted, prevRects); return; }
 
       if (filtered.length === 0 && searchQuery) {
         const msg = document.createElement('p');
@@ -1001,6 +1056,7 @@
       });
 
       grid.appendChild(makeAddCard());
+      playFlipAnimation(grid, prevRects);
     }
 
     function makeAddCard() {
@@ -1122,6 +1178,48 @@
       if (cmpBarsOpen) drawCmpBars(_cmpSelectedItems);
     }
 
+    // ── RADAR ZOOM (full-screen) ─────────────────────────
+    // Reuses drawCmpRadar's exact drawing logic against a second, much
+    // larger canvas rather than duplicating the chart math.
+    let _radarZoomResizeHandler = null;
+
+    function openRadarZoom() {
+      if (categories.length < 3) { showToast('Radar needs at least 3 categories to draw a shape.', true); return; }
+      const overlay = document.getElementById('radar-zoom-overlay');
+      if (!overlay) return;
+      overlay.classList.add('open');
+      redrawRadarZoom();
+
+      // Re-layout on resize while the zoom view is open (window resize,
+      // or rotating a tablet) — capped with a small debounce
+      let t;
+      _radarZoomResizeHandler = () => { clearTimeout(t); t = setTimeout(redrawRadarZoom, 120); };
+      window.addEventListener('resize', _radarZoomResizeHandler);
+    }
+
+    function closeRadarZoom() {
+      const overlay = document.getElementById('radar-zoom-overlay');
+      if (overlay) overlay.classList.remove('open');
+      if (_radarZoomResizeHandler) {
+        window.removeEventListener('resize', _radarZoomResizeHandler);
+        _radarZoomResizeHandler = null;
+      }
+    }
+
+    function redrawRadarZoom() {
+      const wrap = document.getElementById('radar-zoom-wrap');
+      if (!wrap) return;
+      // Leaves room for the legend below and header/padding above+below;
+      // width is capped by the wrap's own available space either way.
+      const maxSize = Math.min(wrap.clientWidth || 900, window.innerHeight - 220);
+      drawCmpRadar(_cmpSelectedItems, {
+        canvasId: 'radar-zoom-canvas',
+        legendId: 'radar-zoom-legend',
+        wrapId:   'radar-zoom-wrap',
+        maxSize:  Math.max(320, maxSize)
+      });
+    }
+
     // Distinct, theme-consistent colours per compare slot (max 4 items)
     const CMP_RADAR_COLORS = ['#d94f5c', '#4ae8c9', '#e8c94a', '#8a7fe8'];
 
@@ -1159,10 +1257,14 @@
       return document.body.classList.contains('light') ? '51,59,60' : '232,232,236';
     }
 
-    function drawCmpRadar(selected) {
-      const canvas = document.getElementById('cmp-radar-canvas');
-      const legend = document.getElementById('cmp-radar-legend');
-      const wrap   = document.getElementById('cmp-radar-wrap');
+    // opts lets a second caller (the full-screen zoom view) reuse this exact
+    // drawing logic against different target elements and a larger canvas,
+    // instead of duplicating ~120 lines of chart-drawing math.
+    function drawCmpRadar(selected, opts) {
+      opts = opts || {};
+      const canvas = document.getElementById(opts.canvasId || 'cmp-radar-canvas');
+      const legend = document.getElementById(opts.legendId || 'cmp-radar-legend');
+      const wrap   = document.getElementById(opts.wrapId   || 'cmp-radar-wrap');
       const ink    = _chartInkRGB();
       legend.innerHTML = '';
 
@@ -1174,7 +1276,8 @@
       canvas.style.display = 'block';
 
       const N = categories.length;
-      const size = Math.min(460, wrap.clientWidth || 460);
+      const maxSize = opts.maxSize || 460;
+      const size = Math.min(maxSize, wrap.clientWidth || maxSize);
       const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
       canvas.width  = size * DPR;
       canvas.height = size * DPR;
@@ -1184,8 +1287,11 @@
       ctx.scale(DPR, DPR);
       ctx.clearRect(0, 0, size, size);
 
+      // Labels, dots, and line weight scale gently with canvas size so the
+      // zoomed view looks like a bigger chart, not the same chart stretched
+      const scale = size / 460;
       const cx = size / 2, cy = size / 2;
-      const labelPad = 62; // more room so labels rarely need truncating
+      const labelPad = 62 * scale; // more room so labels rarely need truncating
       const R = size / 2 - labelPad;
       const rings = 4;
 
@@ -1193,7 +1299,7 @@
 
       // ── Ring grid (concentric N-gons) ───────────────────────────────────
       ctx.strokeStyle = `rgba(${ink},0.14)`;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = Math.max(1, scale);
       for (let r = 1; r <= rings; r++) {
         const ringR = (R * r) / rings;
         ctx.beginPath();
@@ -1218,14 +1324,15 @@
 
       // ── Category labels — full name where possible, wrapped to 2 lines,
       //    truncated only as a last resort (keeping at least half the word) ──
-      ctx.font = '600 10.5px Barlow, system-ui, sans-serif';
+      const labelFontPx = Math.round(10.5 * scale * 10) / 10;
+      ctx.font = `600 ${labelFontPx}px Barlow, system-ui, sans-serif`;
       ctx.fillStyle = `rgba(${ink},0.72)`;
-      const LABEL_MAX_W = 96;
-      const LABEL_LINE_H = 12;
+      const LABEL_MAX_W = 96 * scale;
+      const LABEL_LINE_H = 12 * scale;
       categories.forEach((k, i) => {
         const a = angleFor(i);
-        const lx = cx + (R + 26) * Math.cos(a);
-        const ly = cy + (R + 26) * Math.sin(a);
+        const lx = cx + (R + 26 * scale) * Math.cos(a);
+        const ly = cy + (R + 26 * scale) * Math.sin(a);
         ctx.textAlign = Math.cos(a) > 0.2 ? 'left' : Math.cos(a) < -0.2 ? 'right' : 'center';
         const vertDir = Math.sin(a) > 0.2 ? 'down' : Math.sin(a) < -0.2 ? 'up' : 'center';
         const lines = wrapChartLabel(ctx, k.toUpperCase(), LABEL_MAX_W);
@@ -1254,7 +1361,7 @@
         ctx.fillStyle = color + '26'; // ~15% alpha fill
         ctx.fill();
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * scale;
         ctx.stroke();
 
         // Vertex dots
@@ -1265,7 +1372,7 @@
           const x   = cx + R * pct * Math.cos(a);
           const y   = cy + R * pct * Math.sin(a);
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.arc(x, y, 3 * scale, 0, Math.PI * 2);
           ctx.fillStyle = color;
           ctx.fill();
         });
@@ -1450,6 +1557,7 @@
     }
     function closeCompare() {
       document.getElementById('cmp-overlay').classList.remove('open');
+      closeRadarZoom();
     }
 
     // ── ADD / EDIT MODAL ───────────────────────────────
@@ -2431,7 +2539,7 @@
       axisSaveSettings({ viewMode });
     }
 
-    function renderListView(sorted) {
+    function renderListView(sorted, prevRects) {
       const grid = document.getElementById('grid');
       grid.classList.add('list-mode');
       sorted.forEach(item => {
@@ -2474,6 +2582,7 @@
         grid.appendChild(row);
       });
       grid.appendChild(makeAddCard());
+      playFlipAnimation(grid, prevRects);
     }
 
 
@@ -3516,13 +3625,17 @@
       const ids = [
         'modal-overlay', 'cat-modal-overlay', 'backup-modal-overlay',
         'settings-modal-overlay', 'projects-modal-overlay', 'cmp-overlay',
-        'bulk-overlay', 'viewer-overlay', 'ham-drawer',
+        'bulk-overlay', 'viewer-overlay', 'ham-drawer', 'radar-zoom-overlay',
       ];
       return ids.some(id => document.getElementById(id)?.classList.contains('open'));
     }
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
+        if (document.getElementById('radar-zoom-overlay')?.classList.contains('open')) {
+          closeRadarZoom();
+          return;
+        }
         closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal();
         closeSettingsModal(); closeProjectsModal();
         document.getElementById('viewer-overlay').classList.remove('open');

@@ -412,6 +412,7 @@
     </div>
     <div id="cmp-body">
       <div id="cmp-radar-wrap">
+        <button id="cmp-radar-zoom-btn" onclick="openRadarZoom()" title="Expand radar chart">⤢ Expand</button>
         <canvas id="cmp-radar-canvas"></canvas>
         <div id="cmp-radar-legend"></div>
       </div>
@@ -420,6 +421,18 @@
         <div id="cmp-bars-legend"></div>
       </div>
       <div id="cmp-table"></div>
+    </div>
+  </div>
+
+  <!-- RADAR ZOOM (full-screen) -->
+  <div id="radar-zoom-overlay">
+    <div id="radar-zoom-header">
+      <h2>📊 Radar — Full View</h2>
+      <button class="btn small" onclick="closeRadarZoom()">✕ Close</button>
+    </div>
+    <div id="radar-zoom-wrap">
+      <canvas id="radar-zoom-canvas"></canvas>
+      <div id="radar-zoom-legend"></div>
     </div>
   </div>
 
