@@ -22,6 +22,13 @@
     // ── PERSISTENCE ────────────────────────────────────
     let incognitoMode = false;
 
+    // ── VERSION / UPDATE CHECK ──────────────────────────
+    // Keep this in sync with the version shown in the Settings > About panel
+    // and with the tag of the most recent GitHub release.
+    const APP_VERSION = '1.6.0';
+    const UPDATE_REPO = 'PR0Gorib/Axis';
+    let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
+
     // ── STORAGE SHIMS ──────────────────────────────────
     // These bridge the stub names used throughout the file
     // to the AxisStorage API defined in storage.js
@@ -452,6 +459,80 @@
       t.className = 'show' + (isError ? ' error' : '');
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+    }
+
+    // ── UPDATE CHECK ─────────────────────────────────────
+    // Compares two 'x.y.z' version strings (an optional leading 'v' and any
+    // trailing '-beta'/'+build' style suffix are ignored). Returns 1 if a > b,
+    // -1 if a < b, 0 if equal. Missing/non-numeric parts are treated as 0.
+    function compareVersions(a, b) {
+      const clean = v => String(v || '').trim().replace(/^v/i, '').split(/[-+]/)[0];
+      const pa = clean(a).split('.').map(n => parseInt(n, 10) || 0);
+      const pb = clean(b).split('.').map(n => parseInt(n, 10) || 0);
+      const len = Math.max(pa.length, pb.length);
+      for (let i = 0; i < len; i++) {
+        const na = pa[i] || 0, nb = pb[i] || 0;
+        if (na !== nb) return na > nb ? 1 : -1;
+      }
+      return 0;
+    }
+
+    // manual=true → called from the Settings button, so always show a toast
+    // result (found / up to date / error). manual=false → silent startup
+    // check, only surfaces anything when a newer release actually exists.
+    async function checkForUpdates(manual = false) {
+      const statusEl = document.getElementById('update-check-status');
+      const btnEl    = document.getElementById('update-check-btn');
+      if (manual && btnEl) { btnEl.disabled = true; btnEl.textContent = 'Checking…'; }
+      if (manual && statusEl) { statusEl.textContent = 'Checking for updates…'; statusEl.classList.remove('update-available'); }
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, {
+          headers: { 'Accept': 'application/vnd.github+json' }
+        });
+        if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
+        const data = await res.json();
+        const latestTag = data.tag_name || data.name || '';
+        const releaseUrl = data.html_url || `https://github.com/${UPDATE_REPO}/releases`;
+
+        if (compareVersions(latestTag, APP_VERSION) > 0) {
+          showUpdateBanner(latestTag, releaseUrl);
+          if (statusEl) {
+            statusEl.textContent = `Version ${latestTag.replace(/^v/i, '')} is available.`;
+            statusEl.classList.add('update-available');
+          }
+          if (manual) showToast(`Update available: ${latestTag}`);
+        } else {
+          if (statusEl) {
+            statusEl.textContent = 'You have the latest version.';
+            statusEl.classList.remove('update-available');
+          }
+          if (manual) showToast("You're on the latest version.");
+        }
+      } catch (e) {
+        console.error('[Axis] update check failed:', e);
+        if (statusEl) statusEl.textContent = 'Check GitHub for a newer release.';
+        if (manual) showToast('Could not check for updates — check your connection.', true);
+      } finally {
+        if (manual && btnEl) { btnEl.disabled = false; btnEl.textContent = 'Check for Updates'; }
+      }
+    }
+
+    function showUpdateBanner(tag, url) {
+      if (updateDismissed) return;
+      const banner = document.getElementById('update-banner');
+      const text   = document.getElementById('update-banner-text');
+      const link   = document.getElementById('update-banner-link');
+      if (!banner) return;
+      if (text) text.textContent = `A new version of Axis is available (${tag.replace(/^v/i, '')}).`;
+      if (link) link.href = url;
+      banner.style.display = 'flex';
+    }
+
+    function dismissUpdateBanner() {
+      updateDismissed = true;
+      const banner = document.getElementById('update-banner');
+      if (banner) banner.style.display = 'none';
     }
 
     // ── HELPERS ────────────────────────────────────────
@@ -1960,6 +2041,15 @@
     }
     document.addEventListener('click', () => closeHamExportMenu());
 
+    function toggleShareFormatMenu(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('share-format-menu')?.classList.toggle('open');
+    }
+    function closeShareFormatMenu() {
+      document.getElementById('share-format-menu')?.classList.remove('open');
+    }
+    document.addEventListener('click', () => closeShareFormatMenu());
+
     // ── HAMBURGER MENU ─────────────────────────────────────
     function openHamMenu() {
       document.getElementById('ham-overlay').classList.add('open');
@@ -1974,6 +2064,7 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         closeHamMenu();
+        closeShareFormatMenu();
       }
     });
 
@@ -2893,19 +2984,45 @@
     // ── SHARE LEADERBOARD AS IMAGE ──────────────────────
     // Same visual language as shareItemAsImage above (fixed dark palette,
     // same font stack, self-contained draw helpers) — but renders the
-    // whole ranking instead of one item.
-    function shareLeaderboardAsImage() {
+    // whole ranking instead of one item. Two formats share one loader/
+    // download pipeline: 'list' (rows) and 'grid' (cards).
+    function shareLeaderboardAsImage(format) {
       if (!items.length) { showToast('No items to include in the leaderboard yet.', true); return; }
       if (!categories.length) { showToast('Add a category first — ranking needs at least one.', true); return; }
 
+      const MAX_ITEMS = 20; // keeps the image a sane size; overflow is noted at the bottom
+      const sorted    = [...items].sort((a, b) => overallScore(b) - overallScore(a));
+      const shown     = sorted.slice(0, MAX_ITEMS);
+      const overflow  = sorted.length - shown.length;
+
+      // Preload every visible item's primary thumbnail (or null if it has
+      // none / fails to load) before drawing anything
+      const loaders = shown.map(item => new Promise(resolve => {
+        const src = axisImgSrc(item.img);
+        if (!src) { resolve(null); return; }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload  = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      }));
+
+      Promise.all(loaders).then(thumbs => {
+        const canvas = format === 'grid'
+          ? buildLeaderboardGridImage(shown, sorted.length, overflow, thumbs)
+          : buildLeaderboardListImage(shown, sorted.length, overflow, thumbs);
+
+        const a = document.createElement('a');
+        a.download = `axis_ranking_${format === 'grid' ? 'grid_' : ''}${new Date().toISOString().slice(0, 10)}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+        showToast('Leaderboard image saved.');
+      });
+    }
+
+    function buildLeaderboardListImage(shown, totalCount, overflow, thumbs) {
       const W        = 480;
       const PAD      = 22;
-      const MAX_ITEMS = 20; // keeps the image a sane size; overflow is noted at the bottom
-
-      const sorted   = [...items].sort((a, b) => overallScore(b) - overallScore(a));
-      const shown    = sorted.slice(0, MAX_ITEMS);
-      const overflow = sorted.length - shown.length;
-
       const ROW_H    = 54;
       const HEADER_H = 78;
       const FOOTER_H = overflow > 0 ? 46 : 30;
@@ -2923,141 +3040,276 @@
       const C_DIM    = 'rgba(255,255,255,0.22)';
       const RANK_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32']; // gold, silver, bronze
 
-      // Preload every visible item's primary thumbnail (or null if it has
-      // none / fails to load) before drawing anything
-      const loaders = shown.map(item => new Promise(resolve => {
-        const src = axisImgSrc(item.img);
-        if (!src) { resolve(null); return; }
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload  = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = src;
-      }));
+      const canvas = document.createElement('canvas');
+      const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
+      canvas.width  = W * DPR;
+      canvas.height = H * DPR;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(DPR, DPR);
 
-      Promise.all(loaders).then(build);
-
-      function build(thumbs) {
-        const canvas = document.createElement('canvas');
-        const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
-        canvas.width  = W * DPR;
-        canvas.height = H * DPR;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(DPR, DPR);
-
-        function box(x, y, w, h, c) {
-          ctx.fillStyle = c;
-          ctx.fillRect(~~x, ~~y, ~~Math.max(1, w), ~~Math.max(1, h));
-        }
-        function roundBox(x, y, w, h, r, c) {
-          const rr = Math.min(r, w / 2, h / 2);
-          ctx.fillStyle = c;
-          ctx.beginPath();
-          ctx.moveTo(x + rr, y);
-          ctx.arcTo(x + w, y, x + w, y + h, rr);
-          ctx.arcTo(x + w, y + h, x, y + h, rr);
-          ctx.arcTo(x, y + h, x, y, rr);
-          ctx.arcTo(x, y, x + w, y, rr);
-          ctx.closePath();
-          ctx.fill();
-        }
-        function txt(s, x, y, font, c, align) {
-          ctx.save();
-          ctx.font = font; ctx.fillStyle = c;
-          ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
-          ctx.fillText(s, ~~x, ~~y);
-          ctx.restore();
-        }
-        function measure(s, font) {
-          ctx.save(); ctx.font = font;
-          const w = ctx.measureText(s).width;
-          ctx.restore(); return w;
-        }
-        function trunc(s, maxPx, font) {
-          if (measure(s, font) <= maxPx) return s;
-          while (s.length > 1 && measure(s + '…', font) > maxPx) s = s.slice(0, -1);
-          return s + '…';
-        }
-
-        // ── Background ──────────────────────────────────────────────────
-        box(0, 0, W, H, C_BG);
-
-        // ── Header ───────────────────────────────────────────────────────
-        txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
-        const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-        txt(`${sorted.length} item${sorted.length === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
-            '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
-        box(PAD, 50, W - PAD * 2, 1, C_DIV);
-
-        // ── Rows ─────────────────────────────────────────────────────────
-        shown.forEach((item, i) => {
-          const ry     = HEADER_H + i * ROW_H;
-          const isTop3 = i < 3;
-          const accent = isTop3 ? RANK_COLORS[i] : C_ACCENT;
-
-          if (i % 2 === 1) box(0, ry, W, ROW_H, C_ROW);
-
-          // Rank number
-          const rankFont = isTop3 ? '900 20px system-ui,Arial,sans-serif' : '800 16px system-ui,Arial,sans-serif';
-          txt(`#${i + 1}`, PAD, ry + ROW_H / 2 + 6, rankFont, isTop3 ? accent : C_LABEL, 'left');
-
-          // Thumbnail — rounded square, cover-fit, placeholder mark if none
-          const thumbSize = 38;
-          const thumbX    = PAD + 44;
-          const thumbY    = ry + (ROW_H - thumbSize) / 2;
-          const img = thumbs[i];
-          if (img) {
-            ctx.save();
-            const rr = 6;
-            ctx.beginPath();
-            ctx.moveTo(thumbX + rr, thumbY);
-            ctx.arcTo(thumbX + thumbSize, thumbY, thumbX + thumbSize, thumbY + thumbSize, rr);
-            ctx.arcTo(thumbX + thumbSize, thumbY + thumbSize, thumbX, thumbY + thumbSize, rr);
-            ctx.arcTo(thumbX, thumbY + thumbSize, thumbX, thumbY, rr);
-            ctx.arcTo(thumbX, thumbY, thumbX + thumbSize, thumbY, rr);
-            ctx.closePath();
-            ctx.clip();
-            const scale = Math.max(thumbSize / img.naturalWidth, thumbSize / img.naturalHeight);
-            const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
-            ctx.drawImage(img, thumbX + (thumbSize - dw) / 2, thumbY + (thumbSize - dh) / 2, dw, dh);
-            ctx.restore();
-          } else {
-            roundBox(thumbX, thumbY, thumbSize, thumbSize, 6, '#1c1c24');
-            txt('◈', thumbX + thumbSize / 2, thumbY + thumbSize / 2 + 6, '18px system-ui,sans-serif', C_DIM, 'center');
-          }
-
-          // Name + mini score bar
-          const nameX    = thumbX + thumbSize + 14;
-          const scoreStr = overallScore(item).toFixed(1);
-          const nameMaxW = W - PAD - nameX - measure(scoreStr, '800 16px system-ui,Arial,sans-serif') - 50;
-          const nameFont = '700 15px system-ui,-apple-system,Arial,sans-serif';
-          txt(trunc(item.name, nameMaxW, nameFont), nameX, ry + ROW_H / 2 - 3, nameFont, C_WHITE, 'left');
-
-          const barY = ry + ROW_H / 2 + 8;
-          const pct  = statMax > 0 ? Math.min(overallScore(item) / statMax, 1) : 0;
-          roundBox(nameX, barY, nameMaxW, 4, 2, C_TRACK);
-          if (pct > 0) roundBox(nameX, barY, Math.max(nameMaxW * pct, 6), 4, 2, accent);
-
-          // Score, right-aligned
-          txt(scoreStr, W - PAD, ry + ROW_H / 2 + 4, '800 16px system-ui,Arial,sans-serif', accent, 'right');
-        });
-
-        // ── Footer ───────────────────────────────────────────────────────
-        const footerTop = HEADER_H + shown.length * ROW_H;
-        box(PAD, footerTop, W - PAD * 2, 1, C_DIV);
-        if (overflow > 0) {
-          txt(`+ ${overflow} more item${overflow === 1 ? '' : 's'} not shown`, PAD, footerTop + 20,
-              '600 11px system-ui,Arial,sans-serif', C_LABEL, 'left');
-        }
-        txt('Made with ◈ Axis', W - PAD, H - 12, '500 10px system-ui,Arial,sans-serif', C_DIM, 'right');
-
-        // ── Download ─────────────────────────────────────────────────────
-        const a = document.createElement('a');
-        a.download = `axis_ranking_${new Date().toISOString().slice(0, 10)}.png`;
-        a.href = canvas.toDataURL('image/png');
-        a.click();
-        showToast('Leaderboard image saved.');
+      function box(x, y, w, h, c) {
+        ctx.fillStyle = c;
+        ctx.fillRect(~~x, ~~y, ~~Math.max(1, w), ~~Math.max(1, h));
       }
+      function roundBox(x, y, w, h, r, c) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+        ctx.fill();
+      }
+      function txt(s, x, y, font, c, align) {
+        ctx.save();
+        ctx.font = font; ctx.fillStyle = c;
+        ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText(s, ~~x, ~~y);
+        ctx.restore();
+      }
+      function measure(s, font) {
+        ctx.save(); ctx.font = font;
+        const w = ctx.measureText(s).width;
+        ctx.restore(); return w;
+      }
+      function trunc(s, maxPx, font) {
+        if (measure(s, font) <= maxPx) return s;
+        while (s.length > 1 && measure(s + '…', font) > maxPx) s = s.slice(0, -1);
+        return s + '…';
+      }
+
+      // ── Background ──────────────────────────────────────────────────
+      box(0, 0, W, H, C_BG);
+
+      // ── Header ───────────────────────────────────────────────────────
+      txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
+      const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      txt(`${totalCount} item${totalCount === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
+          '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
+      box(PAD, 50, W - PAD * 2, 1, C_DIV);
+
+      // ── Rows ─────────────────────────────────────────────────────────
+      shown.forEach((item, i) => {
+        const ry     = HEADER_H + i * ROW_H;
+        const isTop3 = i < 3;
+        const accent = isTop3 ? RANK_COLORS[i] : C_ACCENT;
+
+        if (i % 2 === 1) box(0, ry, W, ROW_H, C_ROW);
+
+        // Rank number
+        const rankFont = isTop3 ? '900 20px system-ui,Arial,sans-serif' : '800 16px system-ui,Arial,sans-serif';
+        txt(`#${i + 1}`, PAD, ry + ROW_H / 2 + 6, rankFont, isTop3 ? accent : C_LABEL, 'left');
+
+        // Thumbnail — rounded square, cover-fit, placeholder mark if none
+        const thumbSize = 38;
+        const thumbX    = PAD + 44;
+        const thumbY    = ry + (ROW_H - thumbSize) / 2;
+        const img = thumbs[i];
+        if (img) {
+          ctx.save();
+          const rr = 6;
+          ctx.beginPath();
+          ctx.moveTo(thumbX + rr, thumbY);
+          ctx.arcTo(thumbX + thumbSize, thumbY, thumbX + thumbSize, thumbY + thumbSize, rr);
+          ctx.arcTo(thumbX + thumbSize, thumbY + thumbSize, thumbX, thumbY + thumbSize, rr);
+          ctx.arcTo(thumbX, thumbY + thumbSize, thumbX, thumbY, rr);
+          ctx.arcTo(thumbX, thumbY, thumbX + thumbSize, thumbY, rr);
+          ctx.closePath();
+          ctx.clip();
+          const scale = Math.max(thumbSize / img.naturalWidth, thumbSize / img.naturalHeight);
+          const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+          ctx.drawImage(img, thumbX + (thumbSize - dw) / 2, thumbY + (thumbSize - dh) / 2, dw, dh);
+          ctx.restore();
+        } else {
+          roundBox(thumbX, thumbY, thumbSize, thumbSize, 6, '#1c1c24');
+          txt('◈', thumbX + thumbSize / 2, thumbY + thumbSize / 2 + 6, '18px system-ui,sans-serif', C_DIM, 'center');
+        }
+
+        // Name + mini score bar
+        const nameX    = thumbX + thumbSize + 14;
+        const scoreStr = overallScore(item).toFixed(1);
+        const nameMaxW = W - PAD - nameX - measure(scoreStr, '800 16px system-ui,Arial,sans-serif') - 50;
+        const nameFont = '700 15px system-ui,-apple-system,Arial,sans-serif';
+        txt(trunc(item.name, nameMaxW, nameFont), nameX, ry + ROW_H / 2 - 3, nameFont, C_WHITE, 'left');
+
+        const barY = ry + ROW_H / 2 + 8;
+        const pct  = statMax > 0 ? Math.min(overallScore(item) / statMax, 1) : 0;
+        roundBox(nameX, barY, nameMaxW, 4, 2, C_TRACK);
+        if (pct > 0) roundBox(nameX, barY, Math.max(nameMaxW * pct, 6), 4, 2, accent);
+
+        // Score, right-aligned
+        txt(scoreStr, W - PAD, ry + ROW_H / 2 + 4, '800 16px system-ui,Arial,sans-serif', accent, 'right');
+      });
+
+      // ── Footer ───────────────────────────────────────────────────────
+      const footerTop = HEADER_H + shown.length * ROW_H;
+      box(PAD, footerTop, W - PAD * 2, 1, C_DIV);
+      if (overflow > 0) {
+        txt(`+ ${overflow} more item${overflow === 1 ? '' : 's'} not shown`, PAD, footerTop + 20,
+            '600 11px system-ui,Arial,sans-serif', C_LABEL, 'left');
+      }
+      txt('Made with ◈ Axis', W - PAD, H - 12, '500 10px system-ui,Arial,sans-serif', C_DIM, 'right');
+
+      return canvas;
+    }
+
+    function buildLeaderboardGridImage(shown, totalCount, overflow, thumbs) {
+      const COLS      = 3;
+      const CARD_W    = 148;
+      const CARD_H    = 176;
+      const GAP       = 14;
+      const PAD       = 22;
+      const HEADER_H  = 78;
+      const FOOTER_H  = overflow > 0 ? 46 : 30;
+
+      const rows = Math.ceil(shown.length / COLS);
+      const W    = PAD * 2 + COLS * CARD_W + (COLS - 1) * GAP;
+      const H    = HEADER_H + rows * CARD_H + (rows - 1) * GAP + FOOTER_H;
+
+      // Same fixed dark palette as the list format, so both formats look
+      // like they belong to the same product regardless of app theme
+      const C_BG     = '#09090d';
+      const C_CARD   = '#131319';
+      const C_ACCENT = '#d94f5c';
+      const C_WHITE  = '#ffffff';
+      const C_LABEL  = 'rgba(255,255,255,0.5)';
+      const C_TRACK  = 'rgba(255,255,255,0.12)';
+      const C_DIV    = 'rgba(255,255,255,0.1)';
+      const C_DIM    = 'rgba(255,255,255,0.22)';
+      const RANK_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32']; // gold, silver, bronze
+
+      const canvas = document.createElement('canvas');
+      const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
+      canvas.width  = W * DPR;
+      canvas.height = H * DPR;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(DPR, DPR);
+
+      function box(x, y, w, h, c) {
+        ctx.fillStyle = c;
+        ctx.fillRect(~~x, ~~y, ~~Math.max(1, w), ~~Math.max(1, h));
+      }
+      function roundBox(x, y, w, h, r, c) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+        ctx.fill();
+      }
+      function txt(s, x, y, font, c, align) {
+        ctx.save();
+        ctx.font = font; ctx.fillStyle = c;
+        ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText(s, ~~x, ~~y);
+        ctx.restore();
+      }
+      function measure(s, font) {
+        ctx.save(); ctx.font = font;
+        const w = ctx.measureText(s).width;
+        ctx.restore(); return w;
+      }
+      function trunc(s, maxPx, font) {
+        if (measure(s, font) <= maxPx) return s;
+        while (s.length > 1 && measure(s + '…', font) > maxPx) s = s.slice(0, -1);
+        return s + '…';
+      }
+
+      // ── Background ──────────────────────────────────────────────────
+      box(0, 0, W, H, C_BG);
+
+      // ── Header ───────────────────────────────────────────────────────
+      txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
+      const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      txt(`${totalCount} item${totalCount === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
+          '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
+      box(PAD, 50, W - PAD * 2, 1, C_DIV);
+
+      // ── Cards ────────────────────────────────────────────────────────
+      const thumbSize = CARD_W - 24; // square thumbnail, inset within the card
+      shown.forEach((item, i) => {
+        const col  = i % COLS;
+        const row  = Math.floor(i / COLS);
+        const cx   = PAD + col * (CARD_W + GAP);
+        const cy   = HEADER_H + row * (CARD_H + GAP);
+        const isTop3 = i < 3;
+        const accent = isTop3 ? RANK_COLORS[i] : C_ACCENT;
+
+        roundBox(cx, cy, CARD_W, CARD_H, 8, C_CARD);
+        if (isTop3) {
+          // subtle top accent edge for medal ranks
+          roundBox(cx, cy, CARD_W, 3, 2, accent);
+        }
+
+        // Thumbnail
+        const thumbX = cx + 12;
+        const thumbY = cy + 12;
+        const img = thumbs[i];
+        if (img) {
+          ctx.save();
+          const rr = 6;
+          ctx.beginPath();
+          ctx.moveTo(thumbX + rr, thumbY);
+          ctx.arcTo(thumbX + thumbSize, thumbY, thumbX + thumbSize, thumbY + thumbSize, rr);
+          ctx.arcTo(thumbX + thumbSize, thumbY + thumbSize, thumbX, thumbY + thumbSize, rr);
+          ctx.arcTo(thumbX, thumbY + thumbSize, thumbX, thumbY, rr);
+          ctx.arcTo(thumbX, thumbY, thumbX + thumbSize, thumbY, rr);
+          ctx.closePath();
+          ctx.clip();
+          const scale = Math.max(thumbSize / img.naturalWidth, thumbSize / img.naturalHeight);
+          const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+          ctx.drawImage(img, thumbX + (thumbSize - dw) / 2, thumbY + (thumbSize - dh) / 2, dw, dh);
+          ctx.restore();
+        } else {
+          roundBox(thumbX, thumbY, thumbSize, thumbSize, 6, '#1c1c24');
+          txt('◈', thumbX + thumbSize / 2, thumbY + thumbSize / 2 + 8, '26px system-ui,sans-serif', C_DIM, 'center');
+        }
+
+        // Rank badge, top-left corner of the thumbnail
+        const badgeR = 13;
+        const badgeCx = thumbX + badgeR - 2;
+        const badgeCy = thumbY + badgeR - 2;
+        ctx.beginPath();
+        ctx.arc(badgeCx, badgeCy, badgeR, 0, Math.PI * 2);
+        ctx.fillStyle = isTop3 ? accent : 'rgba(9,9,13,0.85)';
+        ctx.fill();
+        const rankFont = isTop3 ? '900 12px system-ui,Arial,sans-serif' : '800 11px system-ui,Arial,sans-serif';
+        txt(`${i + 1}`, badgeCx, badgeCy + 4, rankFont, isTop3 ? '#09090d' : C_WHITE, 'center');
+
+        // Name
+        const textY1 = thumbY + thumbSize + 20;
+        const nameFont = '700 13px system-ui,-apple-system,Arial,sans-serif';
+        txt(trunc(item.name, CARD_W - 24, nameFont), cx + 12, textY1, nameFont, C_WHITE, 'left');
+
+        // Score bar
+        const barY = textY1 + 10;
+        const barW = CARD_W - 24;
+        const pct  = statMax > 0 ? Math.min(overallScore(item) / statMax, 1) : 0;
+        roundBox(cx + 12, barY, barW, 4, 2, C_TRACK);
+        if (pct > 0) roundBox(cx + 12, barY, Math.max(barW * pct, 6), 4, 2, accent);
+
+        // Score number
+        const scoreStr = overallScore(item).toFixed(1);
+        txt(scoreStr, cx + CARD_W - 12, barY + 20, '800 14px system-ui,Arial,sans-serif', accent, 'right');
+      });
+
+      // ── Footer ───────────────────────────────────────────────────────
+      const footerTop = HEADER_H + rows * CARD_H + (rows - 1) * GAP;
+      box(PAD, footerTop, W - PAD * 2, 1, C_DIV);
+      if (overflow > 0) {
+        txt(`+ ${overflow} more item${overflow === 1 ? '' : 's'} not shown`, PAD, footerTop + 20,
+            '600 11px system-ui,Arial,sans-serif', C_LABEL, 'left');
+      }
+      txt('Made with ◈ Axis', W - PAD, H - 12, '500 10px system-ui,Arial,sans-serif', C_DIM, 'right');
+
+      return canvas;
     }
 
     // ── STATIC HTML EXPORT ───────────────────────────────
@@ -3356,6 +3608,9 @@
       await axisRefreshActiveProject();
 
       render();
+
+      // Silent update check — only surfaces the banner if a newer release exists
+      checkForUpdates(false);
     })();
 
 

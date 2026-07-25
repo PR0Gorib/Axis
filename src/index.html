@@ -37,6 +37,13 @@
     </div>
   </header>
 
+  <!-- UPDATE AVAILABLE BANNER — hidden unless a newer GitHub release is found -->
+  <div id="update-banner" style="display:none;">
+    <span id="update-banner-text"></span>
+    <a id="update-banner-link" href="https://github.com/PR0Gorib/Axis/releases" target="_blank" rel="noopener noreferrer">View release ↗</a>
+    <button id="update-banner-close" onclick="dismissUpdateBanner()" title="Dismiss" aria-label="Dismiss">✕</button>
+  </div>
+
   <!-- HAMBURGER DRAWER -->
   <div id="ham-overlay" onclick="closeHamMenu()"></div>
   <div id="ham-drawer" role="dialog" aria-label="Menu">
@@ -140,7 +147,15 @@
     <div id="insights-body">
       <div id="stats-bar"></div>
       <div id="overall-section">
-        <h2><span>🏆 Ranking</span><button id="overall-share-btn" onclick="shareLeaderboardAsImage()" title="Export ranking as image">📷 Share</button></h2>
+        <h2><span>🏆 Ranking</span>
+          <div class="share-format-wrap">
+            <button id="overall-share-btn" onclick="toggleShareFormatMenu(event)" title="Export ranking as image">📷 Share</button>
+            <div id="share-format-menu" class="share-format-menu">
+              <button class="share-format-btn" onclick="shareLeaderboardAsImage('list');closeShareFormatMenu()">☰ List</button>
+              <button class="share-format-btn" onclick="shareLeaderboardAsImage('grid');closeShareFormatMenu()">⊞ Grid</button>
+            </div>
+          </div>
+        </h2>
         <div id="overall-list"></div>
       </div>
     </div>
@@ -346,13 +361,20 @@
         <div class="settings-section">
           <div class="settings-section-title">About</div>
           <div id="settings-about">
-            <div id="settings-about-version">Axis v1.4.0</div>
+            <div id="settings-about-version">Axis v1.6.0</div>
             <div id="settings-about-desc">A general purpose comparison &amp; ranking tool.</div>
             <div id="settings-about-credit">Made by PR0Gorib</div>
             <div id="settings-about-links">
               <a href="https://github.com/PR0Gorib/Axis/" target="_blank" rel="noopener noreferrer">⭐ View on GitHub</a>
               <a href="https://github.com/PR0Gorib/Axis/releases" target="_blank" rel="noopener noreferrer">⬇ Releases</a>
             </div>
+          </div>
+          <div class="settings-row" style="margin-top:14px;">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Updates</div>
+              <div class="settings-row-desc" id="update-check-status">Check GitHub for a newer release.</div>
+            </div>
+            <button id="update-check-btn" class="settings-toggle-btn" onclick="checkForUpdates(true)">Check for Updates</button>
           </div>
         </div>
 
