@@ -2151,12 +2151,31 @@
 
     function toggleShareFormatMenu(e) {
       if (e) e.stopPropagation();
-      document.getElementById('share-format-menu')?.classList.toggle('open');
+      const menu = document.getElementById('share-format-menu');
+      const btn  = document.getElementById('overall-share-btn');
+      if (!menu || !btn) return;
+      const isOpen = menu.classList.contains('open');
+      if (isOpen) {
+        menu.classList.remove('open');
+        return;
+      }
+      // Anchor via fixed coordinates (not CSS position:absolute) so the
+      // popover isn't clipped by #overall-section's overflow:hidden
+      const r = btn.getBoundingClientRect();
+      menu.style.top   = `${r.bottom + 5}px`;
+      menu.style.left  = `${r.right - menu.offsetWidth}px`;
+      menu.classList.add('open');
+      // offsetWidth above may read 0 the very first time (display:none until
+      // just now) — reposition on the next frame once it has real dimensions
+      requestAnimationFrame(() => {
+        menu.style.left = `${r.right - menu.offsetWidth}px`;
+      });
     }
     function closeShareFormatMenu() {
       document.getElementById('share-format-menu')?.classList.remove('open');
     }
     document.addEventListener('click', () => closeShareFormatMenu());
+    window.addEventListener('scroll', () => closeShareFormatMenu(), true);
 
     // ── HAMBURGER MENU ─────────────────────────────────────
     function openHamMenu() {
