@@ -592,6 +592,41 @@
       const vals = categories.map(k => item.stats?.[k] ?? 0);
       return vals.reduce((a, b) => a + b, 0) / vals.length;
     }
+    // ── ICONS ──────────────────────────────────────────
+    // Small hand-picked set of Lucide-style inline SVGs (24x24, 2px stroke,
+    // currentColor) used in place of emoji for functional UI icons — emoji
+    // render inconsistently across platforms and can't inherit button color
+    // states the way these can. Sized via CSS on the containing button.
+    const Icons = {
+      pin:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>',
+      swap:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>',
+      edit:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+      trash:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+      search:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+      sun:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
+      moon:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+      grid:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>',
+      list:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>',
+      sliders:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg>',
+      chart:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>',
+      x:        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+      check:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+      share:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></svg>',
+      copy:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',
+      settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+      folder:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>',
+      clock:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      calc:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>',
+      eyeOff:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/><path d="M9.363 9.363A3 3 0 0 0 12 15a2.99 2.99 0 0 0 2.637-1.637"/></svg>',
+      barChart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>',
+      radar:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10l7.07 7.07"/><path d="M12 12 4.93 19.07"/><circle cx="12" cy="12" r="10"/></svg>',
+      layers:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>',
+      upload:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>',
+      download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+      plus:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+      chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+    };
+
     function esc(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
@@ -872,8 +907,8 @@
         viewBtn.id = 'view-toggle-btn';
         viewBtn.title = viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view';
         viewBtn.innerHTML = viewMode === 'list'
-          ? '⊞ <span class="util-btn-label">Grid</span>'
-          : '☰ <span class="util-btn-label">List</span>';
+          ? `${Icons.grid} <span class="util-btn-label">Grid</span>`
+          : `${Icons.list} <span class="util-btn-label">List</span>`;
         viewBtn.onclick = toggleView;
         utils.appendChild(viewBtn);
       }
@@ -884,7 +919,7 @@
         sfBtn.className = 'toolbar-util-btn' + (document.getElementById('score-filter-bar')?.classList.contains('visible') ? ' active' : '');
         sfBtn.id = 'score-filter-toggle-btn';
         sfBtn.title = 'Filter by score range';
-        sfBtn.textContent = '🎚';
+        sfBtn.innerHTML = Icons.sliders;
         sfBtn.onclick = toggleScoreFilter;
         utils.appendChild(sfBtn);
       }
@@ -895,7 +930,7 @@
         insBtn.className = 'toolbar-util-btn' + (document.getElementById('insights-panel')?.classList.contains('open') ? ' active' : '');
         insBtn.id = 'insights-toggle-btn';
         insBtn.title = 'Insights — ranking & stats';
-        insBtn.innerHTML = '📊 <span class="util-btn-label">Insights</span>';
+        insBtn.innerHTML = `${Icons.chart} <span class="util-btn-label">Insights</span>`;
         insBtn.onclick = toggleInsights;
         utils.appendChild(insBtn);
       }
@@ -1029,9 +1064,9 @@
           ((item.tags || []).length > 3 ? `<span class="tag-chip">+${item.tags.length - 3}</span>` : '');
 
         card.innerHTML = `
-      ${item.pinned ? '<span class="pin-indicator">📌</span>' : ''}
+      ${item.pinned ? `<span class="pin-indicator">${Icons.pin}</span>` : ''}
       <div class="card-select-badge">${selIdx >= 0 ? selIdx + 1 : ''}</div>
-      <div class="bulk-checkbox">✓</div>
+      <div class="bulk-checkbox">${Icons.check}</div>
       <div class="card-img-wrap">${imgHtml}</div>
       <div class="card-body">
         <div class="card-name">${esc(item.name)}</div>
@@ -1042,10 +1077,10 @@
         ${tagChipsHtml ? `<div class="card-tags">${tagChipsHtml}</div>` : ''}
       </div>
       <div class="card-actions">
-        <button class="card-action-btn pin ${item.pinned ? 'active' : ''}" title="${item.pinned ? 'Unpin' : 'Pin'}" onclick="event.stopPropagation();pinItem('${item.id}')">📌</button>
-        <button class="card-action-btn edit" title="Select for compare" onclick="toggleCompare('${item.id}',event)">⇆</button>
-        <button class="card-action-btn edit" title="Edit" onclick="event.stopPropagation();openEditModal('${item.id}')">✎</button>
-        <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">✕</button>
+        <button class="card-action-btn pin ${item.pinned ? 'active' : ''}" title="${item.pinned ? 'Unpin' : 'Pin'}" onclick="event.stopPropagation();pinItem('${item.id}')">${Icons.pin}</button>
+        <button class="card-action-btn edit" title="Select for compare" onclick="toggleCompare('${item.id}',event)">${Icons.swap}</button>
+        <button class="card-action-btn edit" title="Edit" onclick="event.stopPropagation();openEditModal('${item.id}')">${Icons.edit}</button>
+        <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">${Icons.trash}</button>
       </div>`;
 
         card.onclick = () => {
@@ -1139,7 +1174,7 @@
       }
 
       const pinBtn = document.getElementById('panel-pin-btn');
-      pinBtn.textContent = item.pinned ? '📌 Unpin' : '📌 Pin';
+      pinBtn.innerHTML = `${Icons.pin} ${item.pinned ? 'Unpin' : 'Pin'}`;
       pinBtn.onclick = () => pinItem(id);
       document.getElementById('panel-share-btn').onclick = () => shareItemAsImage(item);
       document.getElementById('panel-dup-btn').onclick = () => { closePanel(); duplicateItem(id); };
@@ -1720,7 +1755,7 @@
         thumb.innerHTML = `
       <img src="${esc(src)}" alt="">
       <span class="img-thumb-badge">${badgeText}</span>
-      <button type="button" class="img-thumb-remove" title="Remove" onclick="removePendingImage(${i})">✕</button>
+      <button type="button" class="img-thumb-remove" title="Remove" onclick="removePendingImage(${i})">${Icons.x}</button>
       <div class="img-thumb-nav">
         <button type="button" title="Move left"  ${i === 0 ? 'disabled' : ''} onclick="movePendingImage(${i}, -1)">‹</button>
         <button type="button" title="Move right" ${i === pendingImages.length - 1 ? 'disabled' : ''} onclick="movePendingImage(${i}, 1)">›</button>
@@ -1803,13 +1838,13 @@
     // button, the toolbar view button — so it never goes stale.
     function _syncSettingsUI() {
       const themeBtn = document.getElementById('settings-theme-btn');
-      if (themeBtn) themeBtn.textContent = lightMode ? '☀️ Light' : '🌙 Dark';
+      if (themeBtn) themeBtn.innerHTML = lightMode ? `${Icons.sun} Light` : `${Icons.moon} Dark`;
 
       const statBtn = document.getElementById('settings-statmax-btn');
       if (statBtn) statBtn.textContent = `Max ${statMax}`;
 
       const viewBtn = document.getElementById('settings-view-btn');
-      if (viewBtn) viewBtn.textContent = viewMode === 'list' ? '☰ List' : '⊞ Grid';
+      if (viewBtn) viewBtn.innerHTML = viewMode === 'list' ? `${Icons.list} List` : `${Icons.grid} Grid`;
     }
 
     async function clearAllItems() {
@@ -1978,8 +2013,8 @@
           </div>
           <div class="project-row-actions">
             ${isActive ? '' : `<button class="project-btn open" onclick="axisSwitchProject('${safeId}').then(ok => { if (ok) closeProjectsModal(); else renderProjectsList(); })">Open</button>`}
-            <button class="project-btn rename" onclick="_renameProjectPrompt('${safeId}', '${safeName}')">✎</button>
-            <button class="project-btn delete" onclick="_deleteProjectPrompt('${safeId}', '${safeName}')">✕</button>
+            <button class="project-btn rename" onclick="_renameProjectPrompt('${safeId}', '${safeName}')">${Icons.edit}</button>
+            <button class="project-btn delete" onclick="_deleteProjectPrompt('${safeId}', '${safeName}')">${Icons.x}</button>
           </div>`;
         list.appendChild(row);
       });
@@ -2066,7 +2101,7 @@
         const delBtn = document.createElement('button');
         delBtn.className = 'cat-row-del';
         delBtn.title = 'Remove';
-        delBtn.textContent = '✕';
+        delBtn.innerHTML = Icons.x;
         delBtn.onclick = () => removeCategory(i);
 
         row.appendChild(upBtn);
@@ -2441,7 +2476,7 @@
       pendingTags.forEach((tag, i) => {
         const chip = document.createElement('span');
         chip.className = 'tag-chip';
-        chip.innerHTML = `${esc(tag)}<span class="tag-x" onclick="removePendingTag(${i})">✕</span>`;
+        chip.innerHTML = `${esc(tag)}<span class="tag-x" onclick="removePendingTag(${i})">${Icons.x}</span>`;
         wrap.insertBefore(chip, inp);
       });
     }
@@ -2583,15 +2618,15 @@
         const selIdx = [...compareSet].indexOf(item.id);
 
         row.innerHTML = `
-      <div class="bulk-checkbox">✓</div>
+      <div class="bulk-checkbox">${Icons.check}</div>
       ${imgEl}
       <div class="lrow-name">${esc(item.name)}</div>
       <div class="lrow-stats">${statsHtml || '<span style="font-size:.75rem;color:var(--muted);">No stats</span>'}</div>
       <div class="lrow-overall">${overallScore(item).toFixed(1)}</div>
       <div class="lrow-actions">
-        <button class="card-action-btn edit" title="Compare" onclick="toggleCompare('${item.id}',event)">⇆</button>
-        <button class="card-action-btn edit" title="Edit" onclick="event.stopPropagation();openEditModal('${item.id}')">✎</button>
-        <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">✕</button>
+        <button class="card-action-btn edit" title="Compare" onclick="toggleCompare('${item.id}',event)">${Icons.swap}</button>
+        <button class="card-action-btn edit" title="Edit" onclick="event.stopPropagation();openEditModal('${item.id}')">${Icons.edit}</button>
+        <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">${Icons.trash}</button>
       </div>`;
 
         row.onclick = () => {
@@ -2667,7 +2702,7 @@
         <div class="tpl-row-cats">${cats.map(esc).join(' · ')}</div>
       </div>
       <button class="tpl-btn load" onclick="loadTemplate('${esc(name).replace(/'/g, "\\'")}')">Load</button>
-      <button class="tpl-btn del"  onclick="deleteTpl('${esc(name).replace(/'/g, "\\'")}')">✕</button>`;
+      <button class="tpl-btn del"  onclick="deleteTpl('${esc(name).replace(/'/g, "\\'")}')">${Icons.x}</button>`;
         list.appendChild(row);
       });
     }
@@ -2709,7 +2744,7 @@
       const btn = document.getElementById('theme-toggle-btn');
       const emoji = btn?.querySelector('.tt-emoji');
       const label = document.getElementById('tt-label');
-      if (emoji) emoji.textContent = lightMode ? '☀️' : '🌙';
+      if (emoji) emoji.innerHTML = lightMode ? Icons.sun : Icons.moon;
       if (label) label.textContent = lightMode ? 'Light' : 'Dark';
       if (btn) btn.title = lightMode ? 'Switch to dark mode' : 'Switch to light mode';
       axisSaveSettings({ theme: lightMode ? 'light' : 'dark' });
@@ -2864,7 +2899,7 @@
       save(); render();
       // update pin button label in open panel
       const btn = document.getElementById('panel-pin-btn');
-      if (btn) btn.textContent = item.pinned ? '📌 Unpin' : '📌 Pin';
+      if (btn) btn.innerHTML = `${Icons.pin} ${item.pinned ? 'Unpin' : 'Pin'}`;
       showToast(item.pinned ? `"${item.name}" pinned.` : `"${item.name}" unpinned.`);
     }
 
@@ -3715,7 +3750,7 @@
         const btn = document.getElementById('theme-toggle-btn');
         const emoji = btn?.querySelector('.tt-emoji');
         const label = document.getElementById('tt-label');
-        if (emoji) emoji.textContent = '☀️';
+        if (emoji) emoji.innerHTML = Icons.sun;
         if (label) label.textContent = 'Light';
         if (btn) btn.title = 'Switch to dark mode';
       }

@@ -19,15 +19,15 @@
     </div>
     <div id="incognito-badge">👻 Incognito — data will not be saved</div>
     <div class="header-search">
-      <span class="hs-icon">🔎</span>
+      <span class="hs-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
       <input type="text" id="search-input" placeholder="Search items..." oninput="onSearch(this.value)"
         autocomplete="off" spellcheck="false">
-      <button class="hs-clear" id="search-clear" onclick="clearSearch()" title="Clear">✕</button>
+      <button class="hs-clear" id="search-clear" onclick="clearSearch()" title="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       <span class="hs-count" id="search-count"></span>
     </div>
     <div class="header-actions">
       <button id="theme-toggle-btn" onclick="toggleTheme()" title="Switch light/dark mode" aria-label="Toggle theme">
-        <span class="tt-emoji">🌙</span>
+        <span class="tt-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
         <span id="tt-label">Dark</span>
       </button>
       <button class="btn primary" onclick="openAddModal()">+ Add Item</button>
@@ -41,7 +41,7 @@
   <div id="update-banner" style="display:none;">
     <span id="update-banner-text"></span>
     <a id="update-banner-link" href="https://github.com/PR0Gorib/Axis/releases" target="_blank" rel="noopener noreferrer">View release ↗</a>
-    <button id="update-banner-close" onclick="dismissUpdateBanner()" title="Dismiss" aria-label="Dismiss">✕</button>
+    <button id="update-banner-close" onclick="dismissUpdateBanner()" title="Dismiss" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
   </div>
 
   <!-- HAMBURGER DRAWER -->
@@ -49,25 +49,25 @@
   <div id="ham-drawer" role="dialog" aria-label="Menu">
     <div id="ham-header">
       <span>Menu</span>
-      <button id="ham-close-btn" onclick="closeHamMenu()" title="Close">✕</button>
+      <button id="ham-close-btn" onclick="closeHamMenu()" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
 
     <div class="ham-section">
       <button class="ham-btn" onclick="openSettingsModal();closeHamMenu()">
-        <span class="ham-icon">⚙</span> Settings
+        <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span> Settings
       </button>
       <button class="ham-btn" onclick="openProjectsModal();closeHamMenu()">
-        <span class="ham-icon">📁</span> Projects
+        <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span> Projects
       </button>
       <button class="ham-btn" onclick="openCatModal();closeHamMenu()">
-        <span class="ham-icon">⊞</span> Categories
+        <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span> Categories
       </button>
       <button class="ham-btn" onclick="importData();closeHamMenu()">
-        <span class="ham-icon">⬆</span> Import
+        <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></span> Import
       </button>
       <div class="ham-export-wrap">
         <button class="ham-btn" id="ham-export-btn" onclick="toggleHamExportMenu(event)">
-          <span class="ham-icon">⬇</span> Export <span class="ham-caret">▾</span>
+          <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></span> Export <span class="ham-caret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
         </button>
         <div id="ham-export-menu" class="ham-submenu">
           <button class="ham-sub-btn" onclick="exportJSON();closeHamMenu()">JSON</button>
@@ -76,16 +76,16 @@
         </div>
       </div>
       <button class="ham-btn" onclick="bulkImportTrigger();closeHamMenu()">
-        <span class="ham-icon">⊕</span> Add Images
+        <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span> Add Images
       </button>
       <button class="ham-btn" onclick="openBackupModal();closeHamMenu()">
-        <span class="ham-icon">🕐</span> Backups
+        <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Backups
       </button>
       <button class="ham-btn" onclick="enterBulkEditMode();closeHamMenu()">
-        <span class="ham-icon">🧮</span> Bulk Edit Stats
+        <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg></span> Bulk Edit Stats
       </button>
       <button class="ham-toggle-row" id="ham-incognito-btn" onclick="toggleIncognito()" title="Toggle incognito mode">
-        <span class="ham-toggle-label"><span class="ham-icon">👻</span> Incognito</span>
+        <span class="ham-toggle-label"><span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/><path d="M9.363 9.363A3 3 0 0 0 12 15a2.99 2.99 0 0 0 2.637-1.637"/></svg></span> Incognito</span>
         <span class="ham-switch" id="ham-switch">
           <span class="ham-switch-knob"></span>
         </span>
@@ -123,8 +123,8 @@
   <div id="tag-filter-bar"><span>Tags:</span></div>
   <div id="compare-bar">
     <span id="compare-count"></span>
-    <button class="btn small accent2" id="compare-go-btn" onclick="openCompare()" disabled>⇆ Compare Selected</button>
-    <button class="btn small" onclick="clearCompareSelection()">✕ Clear</button>
+    <button class="btn small accent2" id="compare-go-btn" onclick="openCompare()" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg> Compare Selected</button>
+    <button class="btn small" onclick="clearCompareSelection()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Clear</button>
   </div>
 
   <!-- Bulk edit stats — separate selection mode, no 4-item cap like Compare -->
@@ -139,7 +139,7 @@
       <input type="number" id="bulk-edit-value" step="0.5" min="0" placeholder="Value">
       <button class="btn small primary" onclick="applyBulkEdit()">Apply to Selected</button>
     </div>
-    <button class="btn small" id="bulk-edit-done-btn" onclick="exitBulkEditMode()">✕ Done</button>
+    <button class="btn small" id="bulk-edit-done-btn" onclick="exitBulkEditMode()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Done</button>
   </div>
 
   <!-- Insights panel — collapsed by default, contains Ranking + Stats -->
@@ -147,12 +147,12 @@
     <div id="insights-body">
       <div id="stats-bar"></div>
       <div id="overall-section">
-        <h2><span>🏆 Ranking</span>
+        <h2><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> Ranking</span>
           <div class="share-format-wrap">
-            <button id="overall-share-btn" onclick="toggleShareFormatMenu(event)" title="Export ranking as image">📷 Share</button>
+            <button id="overall-share-btn" onclick="toggleShareFormatMenu(event)" title="Export ranking as image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></svg> Share</button>
             <div id="share-format-menu" class="share-format-menu">
-              <button class="share-format-btn" onclick="shareLeaderboardAsImage('list');closeShareFormatMenu()">☰ List</button>
-              <button class="share-format-btn" onclick="shareLeaderboardAsImage('grid');closeShareFormatMenu()">⊞ Grid</button>
+              <button class="share-format-btn" onclick="shareLeaderboardAsImage('list');closeShareFormatMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg> List</button>
+              <button class="share-format-btn" onclick="shareLeaderboardAsImage('grid');closeShareFormatMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Grid</button>
             </div>
           </div>
         </h2>
@@ -172,7 +172,7 @@
         <span id="panel-date"
           style="font-family:'Barlow Condensed', sans-serif;font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.7;"></span>
       </div>
-      <button class="btn small" onclick="closePanel()">✕ Close</button>
+      <button class="btn small" onclick="closePanel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Close</button>
     </div>
     <div id="panel-carousel">
       <img id="panel-carousel-img" src="" alt="" style="display:none" onclick="openViewer(this.src)">
@@ -192,11 +192,11 @@
       <div id="panel-stats"></div>
     </div>
     <div id="panel-footer">
-      <button class="btn small" id="panel-pin-btn">📌 Pin</button>
-      <button class="btn small" id="panel-share-btn">📷 Share</button>
-      <button class="btn small" id="panel-dup-btn">⧉ Duplicate</button>
-      <button class="btn small" id="panel-edit-btn">✎ Edit</button>
-      <button class="btn small danger" id="panel-del-btn">🗑 Delete</button>
+      <button class="btn small" id="panel-pin-btn"></button>
+      <button class="btn small" id="panel-share-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></svg> Share</button>
+      <button class="btn small" id="panel-dup-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Duplicate</button>
+      <button class="btn small" id="panel-edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit</button>
+      <button class="btn small danger" id="panel-del-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>
     </div>
   </div>
 
@@ -205,7 +205,7 @@
     <div id="modal">
       <div id="modal-header">
         <h2 id="modal-title">Add Item</h2>
-        <button class="btn small" onclick="closeModal()">✕</button>
+        <button class="btn small" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div id="modal-body">
         <div class="field">
@@ -260,10 +260,10 @@
   <div id="cat-modal-overlay">
     <div id="cat-modal">
       <div id="cat-modal-header">
-        <h2>⊞ Categories</h2>
+        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Categories</h2>
         <div style="display:flex;gap:6px;align-items:center;">
           <button class="btn small" id="stat-max-btn" onclick="toggleStatMax()">Max Stat: 10</button>
-          <button class="btn small" onclick="closeCatModal()">✕</button>
+          <button class="btn small" onclick="closeCatModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
       </div>
       <div id="cat-list"></div>
@@ -274,7 +274,7 @@
       </div>
       <div id="tpl-section">
         <div id="tpl-header">
-          <span>📋 Templates</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> Templates</span>
           <button class="btn small" onclick="saveAsTemplate()">+ Save current</button>
         </div>
         <div id="tpl-list"></div>
@@ -286,8 +286,8 @@
   <div id="backup-modal-overlay">
     <div id="backup-modal">
       <div id="backup-modal-header">
-        <h2>🕐 Backups</h2>
-        <button class="btn small" onclick="closeBackupModal()">✕</button>
+        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Backups</h2>
+        <button class="btn small" onclick="closeBackupModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div id="backup-modal-hint">
         A snapshot is taken automatically each time you open Axis and make your first change.
@@ -302,8 +302,8 @@
   <div id="settings-modal-overlay">
     <div id="settings-modal">
       <div id="settings-modal-header">
-        <h2>⚙ Settings</h2>
-        <button class="btn small" onclick="closeSettingsModal()">✕</button>
+        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> Settings</h2>
+        <button class="btn small" onclick="closeSettingsModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div id="settings-body">
 
@@ -314,7 +314,7 @@
               <div class="settings-row-name">Theme</div>
               <div class="settings-row-desc">Switch between dark and light mode.</div>
             </div>
-            <button id="settings-theme-btn" class="settings-toggle-btn" onclick="toggleTheme()">🌙 Dark</button>
+            <button id="settings-theme-btn" class="settings-toggle-btn" onclick="toggleTheme()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> Dark</button>
           </div>
         </div>
 
@@ -336,7 +336,7 @@
               <div class="settings-row-name">Default View</div>
               <div class="settings-row-desc">Show items as a grid of cards or a compact list.</div>
             </div>
-            <button id="settings-view-btn" class="settings-toggle-btn" onclick="toggleView(); _syncSettingsUI();">⊞ Grid</button>
+            <button id="settings-view-btn" class="settings-toggle-btn" onclick="toggleView(); _syncSettingsUI();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Grid</button>
           </div>
         </div>
 
@@ -386,8 +386,8 @@
   <div id="projects-modal-overlay">
     <div id="projects-modal">
       <div id="projects-modal-header">
-        <h2>📁 Projects</h2>
-        <button class="btn small" onclick="closeProjectsModal()">✕</button>
+        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg> Projects</h2>
+        <button class="btn small" onclick="closeProjectsModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div id="projects-modal-hint">
         Each project keeps its own items, categories, images, and backups completely separate. Switch anytime — nothing is lost.
@@ -403,11 +403,11 @@
   <!-- COMPARE MODAL -->
   <div id="cmp-overlay">
     <div id="cmp-header">
-      <h2>⇆ Side-by-Side Comparison</h2>
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg> Side-by-Side Comparison</h2>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn small" id="cmp-radar-toggle" onclick="toggleCmpRadar()">📊 Radar</button>
-        <button class="btn small" id="cmp-bars-toggle" onclick="toggleCmpBars()">📶 Bars</button>
-        <button class="btn small" onclick="closeCompare()">✕ Close</button>
+        <button class="btn small" id="cmp-radar-toggle" onclick="toggleCmpRadar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10l7.07 7.07"/><path d="M12 12 4.93 19.07"/><circle cx="12" cy="12" r="10"/></svg> Radar</button>
+        <button class="btn small" id="cmp-bars-toggle" onclick="toggleCmpBars()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg> Bars</button>
+        <button class="btn small" onclick="closeCompare()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Close</button>
       </div>
     </div>
     <div id="cmp-body">
@@ -427,8 +427,8 @@
   <!-- RADAR ZOOM (full-screen) -->
   <div id="radar-zoom-overlay">
     <div id="radar-zoom-header">
-      <h2>📊 Radar — Full View</h2>
-      <button class="btn small" onclick="closeRadarZoom()">✕ Close</button>
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10l7.07 7.07"/><path d="M12 12 4.93 19.07"/><circle cx="12" cy="12" r="10"/></svg> Radar — Full View</h2>
+      <button class="btn small" onclick="closeRadarZoom()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Close</button>
     </div>
     <div id="radar-zoom-wrap">
       <canvas id="radar-zoom-canvas"></canvas>
@@ -468,7 +468,7 @@
       <button class="btn small" onclick="viewerZoom(-0.25);event.stopPropagation()">− Zoom</button>
       <button class="btn small" onclick="viewerZoomReset();event.stopPropagation()">⊙ Reset</button>
       <button class="btn small" onclick="viewerZoom(0.25);event.stopPropagation()">+ Zoom</button>
-      <button class="btn small" onclick="closeViewer()">✕ Close</button>
+      <button class="btn small" onclick="closeViewer()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Close</button>
     </div>
   </div>
 
