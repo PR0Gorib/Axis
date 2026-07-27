@@ -994,7 +994,7 @@
       const empty = document.getElementById('empty');
       if (!categories.length) {
         empty.innerHTML = `
-          <h2>👋 Welcome to Axis</h2>
+          <h2>Start with a category</h2>
           <p>Axis compares things using categories you define — like Speed, Price, or Rating. Add a category to get started, or open Categories to load a ready-made starter template.</p>
           <div id="empty-steps">
             <div class="empty-step"><span>1</span>Add a category</div>
@@ -1005,8 +1005,8 @@
         `;
       } else {
         empty.innerHTML = `
-          <h2>🎉 Categories ready</h2>
-          <p>Now add your first item to start ranking and comparing.</p>
+          <h2>Ready for your first item</h2>
+          <p>Your categories are set. Add an item to start ranking and comparing.</p>
           <button class="btn primary" onclick="openAddModal()">+ Add First Item</button>
         `;
       }

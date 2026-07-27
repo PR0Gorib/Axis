@@ -1080,6 +1080,18 @@
       justify-content: space-between;
     }
 
+    #overall-section h2 span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #overall-section h2 svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+    }
+
     #overall-share-btn {
       background: none;
       border: 1px solid var(--border);
@@ -1093,6 +1105,15 @@
       text-transform: uppercase;
       padding: 3px 8px;
       transition: border-color .15s, color .15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #overall-share-btn svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
     }
 
     #overall-share-btn:hover {
@@ -1793,6 +1814,15 @@
       font-size: 1.15rem;
       letter-spacing: .06em;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #cat-modal-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
     #cat-list {
@@ -1875,6 +1905,15 @@
       font-size: 1.15rem;
       letter-spacing: .06em;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #settings-modal-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
     #settings-body {
@@ -2125,6 +2164,15 @@
       font-size: 1.15rem;
       letter-spacing: .06em;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #backup-modal-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
     #backup-modal-hint {
@@ -2278,6 +2326,15 @@
       font-size: 1.15rem;
       letter-spacing: .06em;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #projects-modal-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
     #projects-modal-hint {
@@ -2477,6 +2534,15 @@
       font-size: 1.15rem;
       letter-spacing: .08em;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #cmp-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
     #cmp-radar-toggle.active,
@@ -2599,6 +2665,15 @@
       font-size: 1.15rem;
       letter-spacing: .08em;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #radar-zoom-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
     #radar-zoom-wrap {
@@ -3159,15 +3234,21 @@
     /* ── FOOTER ── */
     #site-footer {
       text-align: center;
-      padding: 20px 28px;
-      border-top: 1px solid var(--border);
-      margin-top: 10px;
+      padding: 0;
+      border-top: none;
+      margin-top: 0;
       font-family: 'Barlow Condensed', sans-serif;
       font-size: .72rem;
       letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--muted);
       opacity: .5;
+    }
+
+    body.incognito #site-footer {
+      padding: 20px 28px;
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
     }
 
     /* ── INCOGNITO HEADER BADGE ── */
@@ -3187,16 +3268,16 @@
       background: rgba(74, 232, 201, .08);
       flex-shrink: 0;
       white-space: nowrap;
-      animation: incognito-pulse 2.4s ease-in-out infinite;
+    }
+
+    #incognito-badge svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
     }
 
     #incognito-badge.visible {
       display: flex;
-    }
-
-    @keyframes incognito-pulse {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: .72; }
     }
 
     body.incognito header {
@@ -3205,7 +3286,7 @@
     }
 
     body.incognito #site-footer::before {
-      content: '👻 Incognito — data will not be saved  ·  ';
+      content: 'Incognito — data will not be saved  ·  ';
     }
 
     body.light #incognito-badge {
@@ -3373,6 +3454,15 @@
       letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    #tpl-header span svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
     }
 
     #tpl-list {
@@ -4270,6 +4360,13 @@
       padding: 2px 5px;
       border-radius: 2px;
       transition: color .15s;
+      display: flex;
+      align-items: center;
+    }
+
+    #ham-close-btn svg {
+      width: 15px;
+      height: 15px;
     }
 
     #ham-close-btn:hover {
