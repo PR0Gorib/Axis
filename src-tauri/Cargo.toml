@@ -1,6 +1,6 @@
 [package]
 name = "Axis"
-version = "1.4.0"
+version = "1.7.0"
 description = "General purpose comparison & ranking tool"
 authors = ["pr0gorib"]
 edition = "2021"
