@@ -57,25 +57,25 @@ Grab the latest build for your platform from the **[Releases page](https://githu
 
 ---
 
-## Features
+# Features
 
-- 📊 Custom ranking categories
-- ⚖️ Side-by-side comparison mode
-- 📈 Radar & bar chart visualizations
-- 🏆 Dynamic rankings, podiums & score tiers
-- 🖼️ Advanced image manager (up to 5 images per item)
-- 📷 Share items and rankings as images
-- 📥 CSV, JSON & ZIP import/export support
-- 🔍 Search, tags & advanced filtering
-- 🧮 Bulk stat editing tools
-- 📋 Starter category templates
-- 💾 Automatic backups & restore manager
-- ⚙️ Centralized settings panel
-- 📌 Favorites / pinned items
-- ⌨️ Keyboard shortcuts
-- 🌙 Dark & Light themes
-- 🖥️ Native desktop app via Tauri
-- 🔒 Fully offline & privacy-friendly
+- Custom ranking categories, with starter templates to get going quickly
+- Multiple projects — keep separate comparison lists (e.g. Games, Movies, Restaurants) with their own items, categories, and backups
+- Side-by-side comparison mode with radar and bar chart visualizations, plus a full-screen radar zoom for detailed reading
+- Dynamic rankings, podiums & score tiers
+- Search, tag filtering, and score-range filtering
+- Advanced image manager (up to 5 images per item)
+- Share individual items or full rankings as exported images — leaderboard exports support both list and grid layouts
+- XLSX, JSON & ZIP import/export support, including bulk image import
+- Bulk stat editing tools
+- Automatic backups & restore manager
+- Favorites / pinned items
+- Keyboard shortcuts
+- Dark & Light themes with smooth transitions, and animated re-ranking when you sort or filter
+- In-app update checker — notifies you when a newer release is available on GitHub
+- Incognito mode for temporary, unsaved sessions
+- Native desktop app via Tauri
+- Fully offline & privacy-friendly
 
 ---
 
@@ -84,7 +84,8 @@ Grab the latest build for your platform from the **[Releases page](https://githu
 - HTML
 - CSS
 - JavaScript
-- Tauri
+- [Tauri](https://github.com/tauri-apps/tauri)
+- [SheetJS](https://sheetjs.com) — vendored library powering XLSX import/export
 
 ### Required Tauri Plugins
 
@@ -134,7 +135,8 @@ Axis/
 │   ├── styles.css
 │   ├── app.js
 │   ├── storage.js
-│   └── tauri-close-guard.js
+│   ├── tauri-close-guard.js
+│   └── xlsx.full.min.js   # vendored SheetJS build — do not edit
 ├── src-tauri/
 ├── package.json
 └── icon.png
