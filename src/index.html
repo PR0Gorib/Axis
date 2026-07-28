@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Axis</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="xlsx.full.min.js"></script>
   <script src="storage.js"></script>
 </head>
 
@@ -72,6 +73,7 @@
         <div id="ham-export-menu" class="ham-submenu">
           <button class="ham-sub-btn" onclick="exportJSON();closeHamMenu()">JSON</button>
           <button class="ham-sub-btn" onclick="exportZip();closeHamMenu()">ZIP</button>
+          <button class="ham-sub-btn" onclick="exportXLSX();closeHamMenu()">Excel (XLSX)</button>
           <button class="ham-sub-btn" onclick="exportStaticHTML();closeHamMenu()">Shareable Page (HTML)</button>
         </div>
       </div>
@@ -93,7 +95,7 @@
       <div class="ham-hint">When on, nothing is saved to disk. Data is cleared when you close the app.</div>
     </div>
 
-    <div id="ham-version">Axis v1.6.0</div>
+    <div id="ham-version">Axis v1.4.0</div>
   </div>
 
   <div id="toolbar">
@@ -361,7 +363,7 @@
         <div class="settings-section">
           <div class="settings-section-title">About</div>
           <div id="settings-about">
-            <div id="settings-about-version">Axis v1.X.X</div>
+            <div id="settings-about-version">Axis v1.6.0</div>
             <div id="settings-about-desc">A general purpose comparison &amp; ranking tool.</div>
             <div id="settings-about-credit">Made with ❤️ by PR0Gorib</div>
             <div id="settings-about-links">
@@ -476,7 +478,7 @@
   <div id="toast"></div>
 
   <!-- Hidden import input -->
-  <input type="file" id="import-input" accept=".json,.zip,.csv" style="display:none" onchange="handleImport(this)">
+  <input type="file" id="import-input" accept=".json,.zip,.xlsx" style="display:none" onchange="handleImport(this)">
   <input type="file" id="bulk-input" accept="image/png,image/jpeg,image/webp" multiple style="display:none"
     onchange="handleBulkImport(this)">
 

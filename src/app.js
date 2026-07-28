@@ -226,9 +226,14 @@
       return filename ? `Exported → ${filename}` : null;
     }
 
+    async function axisExportXLSX(itemsArr, catsArr) {
+      const filename = await AxisStorage.exportXLSX(itemsArr, catsArr);
+      return filename ? `Exported → ${filename}` : null;
+    }
+
     /**
      * Parse a File object selected via <input type="file">.
-     * Handles .json and .zip. Returns { items, categories }.
+     * Handles .json, .zip, and .xlsx. Returns { items, categories }.
      */
     async function axisParseImport(file) {
       const nameLower = file.name.toLowerCase();
@@ -286,16 +291,9 @@
         ])));
 
         return data;
-      } else if (nameLower.endsWith('.csv')) {
-        // CSV import — first row is headers. Column 1 is always the item
-        // name regardless of its header text; a column named "tags" and a
-        // column named "bio"/"notes"/"description" are recognised specially
-        // if present; every other column becomes a stat category. Can't
-        // carry images, per-stat notes, pinned status, or dates — CSV is
-        // the low-friction on-ramp from a spreadsheet, not a full-fidelity
-        // format (that's what JSON/ZIP export/import are for).
-        const text = await file.text();
-        return _parseCSVImport(text);
+      } else if (nameLower.endsWith('.xlsx')) {
+        const buffer = await file.arrayBuffer();
+        return _parseXLSXImport(buffer);
       } else {
         // Plain JSON — handle { items, categories } and legacy plain-array formats
         const text = await file.text();
@@ -318,90 +316,66 @@
       }
     }
 
-    // ── CSV IMPORT ───────────────────────────────────────
-    // Minimal RFC-4180-ish row parser — handles quoted fields, embedded
-    // commas/newlines inside quotes, and escaped "" quotes. No external
-    // library, consistent with the rest of Axis.
-    function _parseCSVRows(text) {
-      // Strip a leading UTF-8 BOM — some spreadsheet exports (notably Excel)
-      // prepend one and it would otherwise corrupt the first header name.
-      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    // ── XLSX IMPORT ────────────────────────────────────────
+    // Two-sheet workbook: "Items" (Name, Bio, Tags, Pinned, one column per
+    // category) and "Categories" (Category, Type — Type is reserved for
+    // future category kinds beyond plain numeric stats, defaulting to
+    // "Number" today). Building both sheets means categories round-trip
+    // with their own identity instead of being inferred from leftover
+    // columns, which is more reliable than the old CSV importer's guesswork.
+    function _parseXLSXImport(buffer) {
+      const wb = XLSX.read(buffer, { type: 'array' });
 
-      const rows = [];
-      let row = [];
-      let field = '';
-      let inQuotes = false;
-      let i = 0;
-      const len = text.length;
+      const itemsSheetName = wb.SheetNames.find(n => n.toLowerCase() === 'items') || wb.SheetNames[0];
+      const catsSheetName  = wb.SheetNames.find(n => n.toLowerCase() === 'categories');
+      if (!itemsSheetName) throw new Error('No sheets found in workbook');
 
-      while (i < len) {
-        const ch = text[i];
-        if (inQuotes) {
-          if (ch === '"') {
-            if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
-            inQuotes = false; i++; continue;
-          }
-          field += ch; i++; continue;
-        }
-        if (ch === '"') { inQuotes = true; i++; continue; }
-        if (ch === ',') { row.push(field); field = ''; i++; continue; }
-        if (ch === '\r') { i++; continue; } // normalize CRLF line endings
-        if (ch === '\n') { row.push(field); field = ''; rows.push(row); row = []; i++; continue; }
-        field += ch; i++;
+      const itemRows = XLSX.utils.sheet_to_json(wb.Sheets[itemsSheetName], { defval: '' });
+      if (!itemRows.length) throw new Error('Items sheet has no data rows');
+
+      // Prefer the explicit Categories sheet for the category list (and
+      // future type info); fall back to inferring from Items columns if
+      // that sheet is missing, same spirit as the old CSV importer.
+      let categories;
+      if (catsSheetName) {
+        const catRows = XLSX.utils.sheet_to_json(wb.Sheets[catsSheetName], { defval: '' });
+        categories = catRows
+          .map(r => String(r.Category || r.category || '').trim())
+          .filter(Boolean);
       }
-      if (field.length || row.length) { row.push(field); rows.push(row); }
-      // Drop fully-blank rows (common with a trailing newline at EOF)
-      return rows.filter(r => r.some(c => c.trim() !== ''));
-    }
+      if (!categories || !categories.length) {
+        const reserved = ['name', 'bio', 'notes', 'description', 'tags', 'pinned'];
+        categories = Object.keys(itemRows[0]).filter(h => !reserved.includes(h.toLowerCase()));
+      }
 
-    // Converts parsed CSV rows into the same { items, categories } shape
-    // the JSON/ZIP import paths produce, so handleImport()'s merge/replace
-    // logic downstream needs zero changes to support CSV.
-    function _parseCSVImport(text) {
-      const rows = _parseCSVRows(text);
-      if (rows.length < 2) throw new Error('CSV needs a header row plus at least one data row');
+      const items = itemRows.map((row, i) => {
+        const keys = Object.keys(row);
+        const nameKey = keys.find(k => k.toLowerCase() === 'name') || keys[0];
+        const bioKey  = keys.find(k => ['bio', 'notes', 'description'].includes(k.toLowerCase()));
+        const tagsKey = keys.find(k => k.toLowerCase() === 'tags');
+        const pinKey  = keys.find(k => k.toLowerCase() === 'pinned');
 
-      const headers = rows[0].map(h => h.trim());
-      if (!headers.length || !headers[0]) throw new Error('CSV has no header row');
-
-      const tagsIdx = headers.findIndex(h => h.toLowerCase() === 'tags');
-      const bioIdx  = headers.findIndex(h => ['bio', 'notes', 'description'].includes(h.toLowerCase()));
-
-      // Every column except the name column (always index 0), tags, and
-      // bio becomes a stat category
-      const catCols = headers
-        .map((h, i) => ({ h, i }))
-        .filter(({ h, i }) => i !== 0 && i !== tagsIdx && i !== bioIdx && h);
-
-      const categories = catCols.map(c => c.h);
-      const items = [];
-
-      for (let r = 1; r < rows.length; r++) {
-        const cells = rows[r];
-        const name = (cells[0] || '').trim();
-        if (!name) continue; // skip malformed/blank rows rather than failing the whole import
-
+        const name = String(row[nameKey] ?? '').trim();
         const stats = {};
-        catCols.forEach(({ h, i }) => {
-          const raw = parseFloat(cells[i]);
-          stats[h] = isNaN(raw) ? 0 : Math.min(statMax, Math.max(0, raw));
+        categories.forEach(cat => {
+          const raw = parseFloat(row[cat]);
+          stats[cat] = isNaN(raw) ? 0 : Math.min(statMax, Math.max(0, raw));
         });
-
-        const tags = tagsIdx >= 0 && cells[tagsIdx]
-          ? cells[tagsIdx].split(',').map(t => t.trim()).filter(Boolean)
+        const tags = tagsKey && row[tagsKey]
+          ? String(row[tagsKey]).split(',').map(t => t.trim()).filter(Boolean)
           : [];
+        const bio = bioKey ? String(row[bioKey] || '').trim() : '';
+        const pinned = pinKey ? /^(true|yes|1)$/i.test(String(row[pinKey]).trim()) : false;
 
-        const bio = bioIdx >= 0 ? (cells[bioIdx] || '').trim() : '';
-
-        items.push({
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + r,
-          name, stats, tags, bio,
+        return {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + i,
+          name, stats, tags, bio, pinned,
           img: '', img2: '', img3: '', img4: '', img5: '',
           createdAt: Date.now(),
-        });
-      }
+        };
+      }).filter(item => item.name); // skip malformed/blank rows rather than failing the whole import
 
-      if (!items.length) throw new Error('No valid rows found in CSV');
+      if (!items.length) throw new Error('No valid rows found in Items sheet');
       return { items, categories };
     }
 
@@ -1707,15 +1681,21 @@
         if (cat && noteEl && noteEl.value.trim()) statNotes[cat] = noteEl.value.trim();
       });
       const tags = [...pendingTags];
+      let isDuplicateName = false;
       if (editingId) {
         const item = items.find(x => x.id === editingId);
         if (item) Object.assign(item, { name, img, img2, img3, img4, img5, bio, stats, tags, statNotes });
       } else {
+        isDuplicateName = items.some(x => x.name.toLowerCase() === name.toLowerCase());
         items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, img, img2, img3, img4, img5, bio, stats, tags, statNotes, createdAt: Date.now() });
       }
 
       save(); closeModal(); render();
-      showToast(editingId ? 'Item updated.' : 'Item added.');
+      showToast(
+        editingId ? 'Item updated.'
+        : isDuplicateName ? `Item added — you already have another "${name}".`
+        : 'Item added.'
+      );
     }
 
     function deleteItem(id) {
@@ -2239,6 +2219,10 @@
       const msg = await axisExportZip(items, categories);
       if (msg) showToast(msg);
     }
+    async function exportXLSX() {
+      const msg = await axisExportXLSX(items, categories);
+      if (msg) showToast(msg);
+    }
     function importData() { document.getElementById('import-input').click(); }
     async function handleImport(input) {
       const file = input.files[0]; if (!file) return;
@@ -2251,14 +2235,42 @@
           ? confirm(`Merge ${newItems.length} items into your existing ${items.length}?\nCancel = replace all`)
           : false;
         if (doMerge) {
-          const existing = new Set(items.map(c => c.id));
-          newItems.forEach(c => { if (!existing.has(c.id)) items.push(c); });
+          // Merges dedupe by id (exact re-import of something exported from
+          // this same project) — but imports from formats with no id column
+          // (XLSX, CSV-shaped data) always get freshly generated ids, so an
+          // id-only check would silently create name duplicates every time.
+          // Catch that case up front and let the person decide once, rather
+          // than finding a pile of "Batman" x2 after the fact.
+          const existingIds   = new Set(items.map(c => c.id));
+          const existingNames = new Set(items.map(c => c.name.toLowerCase()));
+          const incoming = newItems.filter(c => !existingIds.has(c.id));
+          const nameCollisions = incoming.filter(c => existingNames.has(c.name.toLowerCase()));
+
+          let skipNames = new Set();
+          if (nameCollisions.length) {
+            const sample = nameCollisions.slice(0, 5).map(c => `"${c.name}"`).join(', ');
+            const more = nameCollisions.length > 5 ? ` and ${nameCollisions.length - 5} more` : '';
+            const skipDuplicates = confirm(
+              `${nameCollisions.length} incoming item${nameCollisions.length === 1 ? '' : 's'} share${nameCollisions.length === 1 ? 's' : ''} a name with something you already have (${sample}${more}).\n\n` +
+              `OK = skip those, keep only the rest\nCancel = add them anyway as separate items`
+            );
+            if (skipDuplicates) skipNames = new Set(nameCollisions.map(c => c.name.toLowerCase()));
+          }
+
+          let addedCount = 0;
+          incoming.forEach(c => {
+            if (skipNames.has(c.name.toLowerCase())) return;
+            items.push(c);
+            addedCount++;
+          });
           newCats.forEach(k => { if (!categories.includes(k)) categories.push(k); });
+          save(); render();
+          showToast(`Imported ${addedCount} item${addedCount !== 1 ? 's' : ''}.` + (skipNames.size ? ` Skipped ${skipNames.size} duplicate${skipNames.size === 1 ? '' : 's'}.` : ''));
         } else {
           items = newItems; categories = newCats;
+          save(); render();
+          showToast(`Imported ${newItems.length} item${newItems.length !== 1 ? 's' : ''}.`);
         }
-        save(); render();
-        showToast(`Imported ${newItems.length} item${newItems.length !== 1 ? 's' : ''}.`);
       } catch (e) {
         console.error('[Axis] import error:', e);
         showToast('Import failed — invalid Axis file.', true);

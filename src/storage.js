@@ -37,6 +37,9 @@
  *   "fs:allow-read-dir", "fs:allow-remove",
  *   "fs:scope-appdata-recursive",
  *   "dialog:allow-open", "dialog:allow-save"   (optional — enables native dialogs)
+ *
+ * exportXLSX() depends on the vendored xlsx.full.min.js (SheetJS, Apache-2.0)
+ * being loaded via <script> BEFORE this file, so the global `XLSX` exists.
  */
 
 const AxisStorage = (() => {
@@ -851,6 +854,54 @@ const AxisStorage = (() => {
     }
   }
 
+  /**
+   * Export as XLSX (two sheets: Items, Categories) via native save dialog.
+   * Does not carry images — same philosophy as the old CSV export: this is
+   * the spreadsheet-friendly round trip, not the full-fidelity one (ZIP/JSON
+   * cover that). Returns the filename used on success, false on cancel/error.
+   */
+  async function exportXLSX(items, categories) {
+    try {
+      if (typeof XLSX === 'undefined') throw new Error('XLSX library not loaded');
+
+      const itemRows = items.map(item => {
+        const row = {
+          Name: item.name || '',
+          Bio: item.bio || '',
+          Tags: (item.tags || []).join(', '),
+          Pinned: item.pinned ? 'Yes' : 'No',
+        };
+        categories.forEach(cat => { row[cat] = item.stats?.[cat] ?? 0; });
+        return row;
+      });
+      const catRows = categories.map(cat => ({ Category: cat, Type: 'Number' }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(itemRows), 'Items');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(catRows), 'Categories');
+
+      const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+      const filename = `${_slugify(await _getActiveProjectName())}.xlsx`;
+
+      if (isTauri() && dlg()?.save) {
+        const savePath = await dlg().save({
+          title: 'Export Axis data',
+          defaultPath: filename,
+          filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }],
+        });
+        if (!savePath) return false;
+        await fs().writeFile(savePath, new Uint8Array(bytes));
+        return filename;
+      }
+      // Browser fallback
+      _browserDownload(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
+      return filename;
+    } catch(e) {
+      console.error('[AxisStorage] exportXLSX failed:', e);
+      return false;
+    }
+  }
+
   function _browserDownload(blob, filename) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1028,6 +1079,7 @@ const AxisStorage = (() => {
     importFile,
     exportJSON,
     exportZip,
+    exportXLSX,
     migrateFromLocalStorage,
     // project management — create/switch/rename/delete separate named
     // comparison lists; see the "How projects work" note at the top of
