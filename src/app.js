@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.6.0';
+    const APP_VERSION = '1.7.0';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
@@ -599,6 +599,7 @@
       download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
       plus:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
       chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+      image:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
     };
 
     function esc(s) {
@@ -2258,14 +2259,15 @@
           }
 
           let addedCount = 0;
+          let skippedCount = 0;
           incoming.forEach(c => {
-            if (skipNames.has(c.name.toLowerCase())) return;
+            if (skipNames.has(c.name.toLowerCase())) { skippedCount++; return; }
             items.push(c);
             addedCount++;
           });
           newCats.forEach(k => { if (!categories.includes(k)) categories.push(k); });
           save(); render();
-          showToast(`Imported ${addedCount} item${addedCount !== 1 ? 's' : ''}.` + (skipNames.size ? ` Skipped ${skipNames.size} duplicate${skipNames.size === 1 ? '' : 's'}.` : ''));
+          showToast(`Imported ${addedCount} item${addedCount !== 1 ? 's' : ''}.` + (skippedCount ? ` Skipped ${skippedCount} duplicate${skippedCount === 1 ? '' : 's'}.` : ''));
         } else {
           items = newItems; categories = newCats;
           save(); render();
@@ -2371,7 +2373,7 @@
         const thumb = document.createElement('div');
         thumb.className = 'bulk-thumb';
         thumb.id = `bulk-thumb-${i}`;
-        thumb.innerHTML = `<div style="width:100%;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--border);">⏳</div>
+        thumb.innerHTML = `<div class="bulk-thumb-loading">${Icons.image}</div>
       <div class="bulk-thumb-name">${esc(name)}</div>`;
         grid.appendChild(thumb);
 
