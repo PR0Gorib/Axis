@@ -1236,27 +1236,29 @@
     // Wrap a category label to fit maxWidth px, using at most 2 lines.
     // Long single words are truncated but never below half their original
     // length, so the reader always gets at least the meaningful first half
-    // rather than a random mid-word chop. Shared by the radar and bar chart.
+    // rather than a random mid-word chop. Both lines are bounds-checked —
+    // a label like "Soundtrack & Radio Stations" can produce a first half
+    // ("Soundtrack &") that's still too wide on its own, so line1 needs the
+    // same truncation safety net line2 already had. Shared by the radar and
+    // bar chart.
     function wrapChartLabel(ctx, text, maxWidth) {
-      const words = text.split(' ');
-      if (words.length === 1) {
-        if (ctx.measureText(text).width <= maxWidth) return [text];
-        let t = text;
-        const minLen = Math.max(3, Math.ceil(text.length / 2));
+      function truncateToFit(s) {
+        if (ctx.measureText(s).width <= maxWidth) return s;
+        let t = s;
+        const minLen = Math.max(3, Math.ceil(s.length / 2));
         while (t.length > minLen && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1);
-        return [t + '…'];
+        return t + '…';
       }
+
+      const words = text.split(' ');
+      if (words.length === 1) return [truncateToFit(text)];
       if (ctx.measureText(text).width <= maxWidth) return [text];
       let mid = Math.floor(text.length / 2);
       let splitIdx = text.lastIndexOf(' ', mid);
       if (splitIdx === -1) splitIdx = text.indexOf(' ', mid);
       if (splitIdx === -1) splitIdx = mid;
-      let line1 = text.slice(0, splitIdx).trim();
-      let line2 = text.slice(splitIdx).trim();
-      if (ctx.measureText(line2).width > maxWidth) {
-        while (line2.length > 3 && ctx.measureText(line2 + '…').width > maxWidth) line2 = line2.slice(0, -1);
-        line2 += '…';
-      }
+      const line1 = truncateToFit(text.slice(0, splitIdx).trim());
+      const line2 = truncateToFit(text.slice(splitIdx).trim());
       return [line1, line2];
     }
 
@@ -1337,15 +1339,30 @@
       const labelFontPx = Math.round(10.5 * scale * 10) / 10;
       ctx.font = `600 ${labelFontPx}px Barlow, system-ui, sans-serif`;
       ctx.fillStyle = `rgba(${ink},0.72)`;
-      const LABEL_MAX_W = 96 * scale;
+      const LABEL_MAX_W = 96 * scale; // cap for top/bottom labels, which have room on both sides
+      const LABEL_MARGIN = 6 * scale; // breathing room before the literal canvas edge
       const LABEL_LINE_H = 12 * scale;
       categories.forEach((k, i) => {
         const a = angleFor(i);
         const lx = cx + (R + 26 * scale) * Math.cos(a);
         const ly = cy + (R + 26 * scale) * Math.sin(a);
-        ctx.textAlign = Math.cos(a) > 0.2 ? 'left' : Math.cos(a) < -0.2 ? 'right' : 'center';
+        const align = Math.cos(a) > 0.2 ? 'left' : Math.cos(a) < -0.2 ? 'right' : 'center';
+        ctx.textAlign = align;
         const vertDir = Math.sin(a) > 0.2 ? 'down' : Math.sin(a) < -0.2 ? 'up' : 'center';
-        const lines = wrapChartLabel(ctx, k.toUpperCase(), LABEL_MAX_W);
+
+        // Text only grows in the direction textAlign implies, so the real
+        // available width is however much canvas is actually left on that
+        // side of the anchor point — not a flat constant. Side-anchored
+        // labels (left/right of the circle) sit close to the horizontal
+        // edges and have noticeably less room than top/bottom labels,
+        // which is exactly why long side labels were clipping before.
+        let availW;
+        if (align === 'left')       availW = size - lx - LABEL_MARGIN;
+        else if (align === 'right') availW = lx - LABEL_MARGIN;
+        else                        availW = Math.min(lx, size - lx) * 2 - LABEL_MARGIN;
+        const maxW = Math.max(28 * scale, Math.min(LABEL_MAX_W, availW));
+
+        const lines = wrapChartLabel(ctx, k.toUpperCase(), maxW);
         const totalH = lines.length * LABEL_LINE_H;
         ctx.textBaseline = 'middle';
         let startY;
