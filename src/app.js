@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.7.0';
+    const APP_VERSION = '1.7.1';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
@@ -1956,6 +1956,82 @@
       document.getElementById('projects-modal-overlay').classList.remove('open');
     }
 
+    // ── PROJECT QUICK SWITCHER (Ctrl/Cmd+K) ─────────────
+    // A fast, keyboard-first "jump to project" palette — distinct from the
+    // Projects modal, which is for managing (rename/delete/create) rather
+    // than quickly hopping between projects you already have.
+    let _switcherProjects = [];   // full { activeProjectId, projects } cache for the current open
+    let _switcherFiltered = [];   // currently-filtered/displayed subset
+    let _switcherSelIdx = 0;      // keyboard-selected row index
+
+    async function openProjectSwitcher() {
+      if (!AxisStorage.isTauri) { showToast('Projects are only available in the desktop app.', true); return; }
+      const { activeProjectId, projects } = await axisListProjects();
+      if (projects.length < 2) { showToast('You only have one project.'); return; }
+
+      _switcherProjects = { activeProjectId, projects };
+      const overlay = document.getElementById('switcher-overlay');
+      const input = document.getElementById('switcher-input');
+      overlay.classList.add('open');
+      input.value = '';
+      _renderSwitcherList('');
+      setTimeout(() => input.focus(), 30);
+    }
+
+    function closeProjectSwitcher() {
+      document.getElementById('switcher-overlay').classList.remove('open');
+    }
+
+    function _renderSwitcherList(query) {
+      const q = query.trim().toLowerCase();
+      const { activeProjectId, projects } = _switcherProjects;
+      _switcherFiltered = !q
+        ? projects
+        : projects.filter(p => p.name.toLowerCase().includes(q));
+      _switcherSelIdx = 0;
+
+      const list = document.getElementById('switcher-list');
+      if (!_switcherFiltered.length) {
+        list.innerHTML = '<div class="switcher-empty">No matching projects.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      _switcherFiltered.forEach((project, i) => {
+        const isActive = project.id === activeProjectId;
+        const row = document.createElement('div');
+        row.className = 'switcher-item' + (i === 0 ? ' selected' : '');
+        row.dataset.idx = i;
+        row.innerHTML = `
+          <span class="switcher-item-name">${esc(project.name)}</span>
+          ${isActive ? '<span class="switcher-item-active">Current</span>' : ''}`;
+        row.onclick = () => _switcherChoose(i);
+        list.appendChild(row);
+      });
+    }
+
+    function _switcherMove(delta) {
+      if (!_switcherFiltered.length) return;
+      _switcherSelIdx = (_switcherSelIdx + delta + _switcherFiltered.length) % _switcherFiltered.length;
+      document.querySelectorAll('.switcher-item').forEach(el => {
+        el.classList.toggle('selected', Number(el.dataset.idx) === _switcherSelIdx);
+      });
+      document.querySelector('.switcher-item.selected')?.scrollIntoView({ block: 'nearest' });
+    }
+
+    async function _switcherChoose(idx) {
+      const project = _switcherFiltered[idx];
+      if (!project) return;
+      closeProjectSwitcher();
+      await axisSwitchProject(project.id);
+    }
+
+    function _switcherKeydown(e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); _switcherMove(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); _switcherMove(-1); }
+      else if (e.key === 'Enter') { e.preventDefault(); _switcherChoose(_switcherSelIdx); }
+      else if (e.key === 'Escape') { e.preventDefault(); closeProjectSwitcher(); }
+    }
+
     // Keeps the header's small project badge in sync with whichever project
     // is actually active. This is a separate element from the tagline — the
     // tagline text itself never changes, by design (see CLAUDE.md). The badge
@@ -3711,6 +3787,7 @@
         'modal-overlay', 'cat-modal-overlay', 'backup-modal-overlay',
         'settings-modal-overlay', 'projects-modal-overlay', 'cmp-overlay',
         'bulk-overlay', 'viewer-overlay', 'ham-drawer', 'radar-zoom-overlay',
+        'switcher-overlay',
       ];
       return ids.some(id => document.getElementById(id)?.classList.contains('open'));
     }
@@ -3721,10 +3798,33 @@
           closeRadarZoom();
           return;
         }
+        if (document.getElementById('switcher-overlay')?.classList.contains('open')) {
+          closeProjectSwitcher();
+          return;
+        }
         closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal();
         closeSettingsModal(); closeProjectsModal();
         document.getElementById('viewer-overlay').classList.remove('open');
         if (bulkEditMode) exitBulkEditMode();
+      }
+      // Ctrl/Cmd+K opens the project quick switcher. Skipped while typing in
+      // a field (don't yank focus away mid-sentence) or while some other
+      // modal is already open (stacking the switcher on top would look
+      // broken) — but pressing it again while the switcher itself is open
+      // closes it, and it's allowed through the general overlay gate below
+      // for exactly that toggle-closed case.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        const switcherOpen = document.getElementById('switcher-overlay')?.classList.contains('open');
+        if (switcherOpen) {
+          e.preventDefault();
+          closeProjectSwitcher();
+          return;
+        }
+        if (!_isTypingContext() && !_anyOverlayOpen()) {
+          e.preventDefault();
+          openProjectSwitcher();
+          return;
+        }
       }
       // Ctrl/Cmd+F focuses search
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -3769,6 +3869,14 @@
     // ── INIT ──────────────────────────────────────────
     (async () => {
       loadTemplates();
+
+      // Shortcut hints default to the Mac symbol in markup; correct to
+      // "Ctrl" text on other platforms
+      if (!/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '')) {
+        document.querySelectorAll('.ham-shortcut-hint').forEach(el => {
+          el.textContent = el.textContent.replace('⌘', 'Ctrl+');
+        });
+      }
 
       // Init Tauri storage directories
       await axisInit();

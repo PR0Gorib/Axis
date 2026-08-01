@@ -2503,6 +2503,153 @@
       border-color: var(--border);
     }
 
+    /* ── PROJECT QUICK SWITCHER ── */
+    #switcher-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      z-index: 250;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 12vh 20px 20px;
+    }
+
+    #switcher-overlay.open {
+      display: flex;
+    }
+
+    #switcher-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 60vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .4);
+    }
+
+    #switcher-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    #switcher-input-wrap svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    #switcher-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-size: .92rem;
+    }
+
+    #switcher-input::placeholder {
+      color: var(--muted);
+    }
+
+    #switcher-list {
+      overflow-y: auto;
+      padding: 6px;
+      flex: 1;
+    }
+
+    .switcher-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .switcher-item.selected {
+      background: rgba(217, 79, 92, .12);
+    }
+
+    .switcher-item-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .92rem;
+      letter-spacing: .02em;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .switcher-item-active {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .6rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      border: 1px solid rgba(74, 232, 201, .35);
+      background: rgba(74, 232, 201, .08);
+      padding: 1px 6px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .switcher-empty {
+      font-family: 'Barlow', sans-serif;
+      font-size: .85rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 24px 10px;
+    }
+
+    #switcher-hint {
+      display: flex;
+      gap: 14px;
+      padding: 9px 16px;
+      border-top: 1px solid var(--border);
+      font-family: 'Barlow', sans-serif;
+      font-size: .7rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    #switcher-hint kbd {
+      display: inline-block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: .68rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 4px;
+      margin-right: 2px;
+    }
+
+    body.light #switcher-box {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    body.light .switcher-item.selected {
+      background: rgba(184, 51, 71, .08);
+    }
+
+    body.light #switcher-hint kbd {
+      background: var(--bg);
+    }
+
     /* ── COMPARE MODAL ── */
     #cmp-overlay {
       position: fixed;
@@ -4588,6 +4735,17 @@
     .ham-btn .ham-caret svg {
       width: 14px;
       height: 14px;
+    }
+
+    .ham-btn .ham-shortcut-hint {
+      margin-left: auto;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--muted);
+      opacity: .6;
+      flex-shrink: 0;
     }
 
     .ham-submenu {
