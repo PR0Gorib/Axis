@@ -2714,7 +2714,7 @@
           ? `<img class="lrow-img" src="${esc(_lsrc)}" alt="${esc(item.name)}" loading="lazy">`
           : `<div class="lrow-img-ph">◈</div>`;
 
-        const statsHtml = categories.slice(0, 7).map(k => {
+        const statsHtml = categories.map(k => {
           const v = item.stats?.[k] ?? 0;
           return `<div class="lrow-stat">
         <div class="lrow-stat-label">${esc(k)}</div>
