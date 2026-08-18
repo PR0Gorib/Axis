@@ -3162,6 +3162,13 @@
       color: var(--accent);
       cursor: default;
       white-space: nowrap;
+      margin: 0;
+    }
+
+    button.tag-chip {
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
     }
 
     .tag-chip.interactive {
@@ -3185,6 +3192,11 @@
       margin-left: 2px;
       display: inline-flex;
       align-items: center;
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font: inherit;
     }
 
     .tag-chip .tag-x svg {

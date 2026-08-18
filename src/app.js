@@ -399,8 +399,10 @@
       // sync drawer switch + header badge
       const switchEl = document.getElementById('ham-switch');
       const headerBadge = document.getElementById('incognito-badge');
+      const toggleBtn = document.getElementById('ham-incognito-btn');
       if (switchEl) switchEl.classList.toggle('on', incognitoMode);
       if (headerBadge) headerBadge.classList.toggle('visible', incognitoMode);
+      if (toggleBtn) toggleBtn.setAttribute('aria-checked', String(incognitoMode));
       if (incognitoMode) {
         // stash current data, start fresh in memory
         items = []; categories = [];
@@ -1052,10 +1054,10 @@
         ${tagChipsHtml ? `<div class="card-tags">${tagChipsHtml}</div>` : ''}
       </div>
       <div class="card-actions">
-        <button class="card-action-btn pin ${item.pinned ? 'active' : ''}" title="${item.pinned ? 'Unpin' : 'Pin'}" onclick="event.stopPropagation();pinItem('${item.id}')">${Icons.pin}</button>
-        <button class="card-action-btn edit" title="Select for compare" onclick="toggleCompare('${item.id}',event)">${Icons.swap}</button>
-        <button class="card-action-btn edit" title="Edit" onclick="event.stopPropagation();openEditModal('${item.id}')">${Icons.edit}</button>
-        <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">${Icons.trash}</button>
+        <button class="card-action-btn pin ${item.pinned ? 'active' : ''}" title="${item.pinned ? 'Unpin' : 'Pin'}" aria-label="${item.pinned ? 'Unpin' : 'Pin'} ${esc(item.name)}" onclick="event.stopPropagation();pinItem('${item.id}')">${Icons.pin}</button>
+        <button class="card-action-btn edit" title="Select for compare" aria-label="Select ${esc(item.name)} for compare" onclick="toggleCompare('${item.id}',event)">${Icons.swap}</button>
+        <button class="card-action-btn edit" title="Edit" aria-label="Edit ${esc(item.name)}" onclick="event.stopPropagation();openEditModal('${item.id}')">${Icons.edit}</button>
+        <button class="card-action-btn del"  title="Delete" aria-label="Delete ${esc(item.name)}" onclick="event.stopPropagation();deleteItem('${item.id}')">${Icons.trash}</button>
       </div>`;
 
         card.onclick = () => {
@@ -1098,7 +1100,7 @@
 
       const tagsEl = document.getElementById('panel-tags');
       tagsEl.innerHTML = (item.tags || []).map(t =>
-        `<span class="tag-chip interactive" onclick="setTagFilter('${esc(t)}');closePanel()">${esc(t)}</span>`
+        `<button type="button" class="tag-chip interactive" aria-label="Filter by tag ${esc(t)}" onclick="setTagFilter('${esc(t)}');closePanel()">${esc(t)}</button>`
       ).join('');
 
       const bioEl   = document.getElementById('panel-bio');
@@ -1751,12 +1753,12 @@
         thumb.className = 'img-thumb' + (i === 0 ? ' is-primary' : '');
         const badgeText = ['Primary','2nd','3rd','4th','5th'][i] || String(i+1);
         thumb.innerHTML = `
-      <img src="${esc(src)}" alt="">
+      <img src="${esc(src)}" alt="${badgeText} image preview">
       <span class="img-thumb-badge">${badgeText}</span>
-      <button type="button" class="img-thumb-remove" title="Remove" onclick="removePendingImage(${i})">${Icons.x}</button>
+      <button type="button" class="img-thumb-remove" title="Remove" aria-label="Remove ${badgeText} image" onclick="removePendingImage(${i})">${Icons.x}</button>
       <div class="img-thumb-nav">
-        <button type="button" title="Move left"  ${i === 0 ? 'disabled' : ''} onclick="movePendingImage(${i}, -1)">‹</button>
-        <button type="button" title="Move right" ${i === pendingImages.length - 1 ? 'disabled' : ''} onclick="movePendingImage(${i}, 1)">›</button>
+        <button type="button" title="Move left"  aria-label="Move ${badgeText} image left"  ${i === 0 ? 'disabled' : ''} onclick="movePendingImage(${i}, -1)">‹</button>
+        <button type="button" title="Move right" aria-label="Move ${badgeText} image right" ${i === pendingImages.length - 1 ? 'disabled' : ''} onclick="movePendingImage(${i}, 1)">›</button>
       </div>`;
         strip.appendChild(thumb);
       });
@@ -1917,7 +1919,7 @@
             <div class="backup-row-date">${esc(date)}${i === 0 ? '<span class="backup-row-latest">Latest</span>' : ''}</div>
             <div class="backup-row-time">${esc(time)}</div>
           </div>
-          <button class="backup-row-restore" onclick="restoreBackupByName('${esc(b.name).replace(/'/g, "\\'")}')">↺ Restore</button>`;
+          <button class="backup-row-restore" aria-label="Restore backup from ${esc(date)} ${esc(time)}" onclick="restoreBackupByName('${esc(b.name).replace(/'/g, "\\'")}')">↺ Restore</button>`;
         list.appendChild(row);
       });
     }
@@ -2087,8 +2089,8 @@
           </div>
           <div class="project-row-actions">
             ${isActive ? '' : `<button class="project-btn open" onclick="axisSwitchProject('${safeId}').then(ok => { if (ok) closeProjectsModal(); else renderProjectsList(); })">Open</button>`}
-            <button class="project-btn rename" onclick="_renameProjectPrompt('${safeId}', '${safeName}')">${Icons.edit}</button>
-            <button class="project-btn delete" onclick="_deleteProjectPrompt('${safeId}', '${safeName}')">${Icons.x}</button>
+            <button class="project-btn rename" title="Rename" aria-label="Rename ${esc(project.name)}" onclick="_renameProjectPrompt('${safeId}', '${safeName}')">${Icons.edit}</button>
+            <button class="project-btn delete" title="Delete" aria-label="Delete ${esc(project.name)}" onclick="_deleteProjectPrompt('${safeId}', '${safeName}')">${Icons.x}</button>
           </div>`;
         list.appendChild(row);
       });
@@ -2148,6 +2150,7 @@
         upBtn.className = 'cat-reorder-btn';
         upBtn.textContent = '↑';
         upBtn.title = 'Move up';
+        upBtn.setAttribute('aria-label', `Move ${cat} up`);
         upBtn.disabled = i === 0;
         upBtn.onclick = () => moveCat(i, i - 1);
 
@@ -2156,6 +2159,7 @@
         downBtn.className = 'cat-reorder-btn';
         downBtn.textContent = '↓';
         downBtn.title = 'Move down';
+        downBtn.setAttribute('aria-label', `Move ${cat} down`);
         downBtn.disabled = i === categories.length - 1;
         downBtn.onclick = () => moveCat(i, i + 1);
 
@@ -2165,6 +2169,7 @@
         nameInput.className = 'cat-row-edit';
         nameInput.value = cat;
         nameInput.title = 'Click to rename';
+        nameInput.setAttribute('aria-label', `Category name: ${cat}`);
         nameInput.addEventListener('blur', () => saveCatRename(i, nameInput.value));
         nameInput.addEventListener('keydown', e => {
           if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); }
@@ -2175,6 +2180,7 @@
         const delBtn = document.createElement('button');
         delBtn.className = 'cat-row-del';
         delBtn.title = 'Remove';
+        delBtn.setAttribute('aria-label', `Remove ${cat}`);
         delBtn.innerHTML = Icons.x;
         delBtn.onclick = () => removeCategory(i);
 
@@ -2583,7 +2589,7 @@
       pendingTags.forEach((tag, i) => {
         const chip = document.createElement('span');
         chip.className = 'tag-chip';
-        chip.innerHTML = `${esc(tag)}<span class="tag-x" onclick="removePendingTag(${i})">${Icons.x}</span>`;
+        chip.innerHTML = `${esc(tag)}<button type="button" class="tag-x" aria-label="Remove tag ${esc(tag)}" onclick="removePendingTag(${i})">${Icons.x}</button>`;
         wrap.insertBefore(chip, inp);
       });
     }
@@ -2601,15 +2607,20 @@
       bar.classList.add('visible');
       // rebuild keeping the label
       bar.innerHTML = '<span>Tags:</span>';
-      const allBtn = document.createElement('span');
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
       allBtn.className = 'tag-chip interactive' + (!activeTagFilter ? ' active' : '');
       allBtn.textContent = 'All';
+      allBtn.setAttribute('aria-pressed', String(!activeTagFilter));
       allBtn.onclick = () => setTagFilter('');
       bar.appendChild(allBtn);
       tags.forEach(tag => {
-        const chip = document.createElement('span');
+        const chip = document.createElement('button');
+        chip.type = 'button';
         chip.className = 'tag-chip interactive' + (activeTagFilter === tag ? ' active' : '');
         chip.textContent = tag;
+        chip.setAttribute('aria-pressed', String(activeTagFilter === tag));
+        chip.setAttribute('aria-label', `Filter by tag ${tag}`);
         chip.onclick = () => setTagFilter(tag === activeTagFilter ? '' : tag);
         bar.appendChild(chip);
       });
@@ -2731,9 +2742,9 @@
       <div class="lrow-stats">${statsHtml || '<span style="font-size:.75rem;color:var(--muted);">No stats</span>'}</div>
       <div class="lrow-overall">${overallScore(item).toFixed(1)}</div>
       <div class="lrow-actions">
-        <button class="card-action-btn edit" title="Compare" onclick="toggleCompare('${item.id}',event)">${Icons.swap}</button>
-        <button class="card-action-btn edit" title="Edit" onclick="event.stopPropagation();openEditModal('${item.id}')">${Icons.edit}</button>
-        <button class="card-action-btn del"  title="Delete" onclick="event.stopPropagation();deleteItem('${item.id}')">${Icons.trash}</button>
+        <button class="card-action-btn edit" title="Compare" aria-label="Select ${esc(item.name)} for compare" onclick="toggleCompare('${item.id}',event)">${Icons.swap}</button>
+        <button class="card-action-btn edit" title="Edit" aria-label="Edit ${esc(item.name)}" onclick="event.stopPropagation();openEditModal('${item.id}')">${Icons.edit}</button>
+        <button class="card-action-btn del"  title="Delete" aria-label="Delete ${esc(item.name)}" onclick="event.stopPropagation();deleteItem('${item.id}')">${Icons.trash}</button>
       </div>`;
 
         row.onclick = () => {
@@ -2808,8 +2819,8 @@
         <div class="tpl-row-name">${esc(name)}</div>
         <div class="tpl-row-cats">${cats.map(esc).join(' · ')}</div>
       </div>
-      <button class="tpl-btn load" onclick="loadTemplate('${esc(name).replace(/'/g, "\\'")}')">Load</button>
-      <button class="tpl-btn del"  onclick="deleteTpl('${esc(name).replace(/'/g, "\\'")}')">${Icons.x}</button>`;
+      <button class="tpl-btn load" aria-label="Load ${esc(name)} template" onclick="loadTemplate('${esc(name).replace(/'/g, "\\'")}')">Load</button>
+      <button class="tpl-btn del"  title="Delete" aria-label="Delete ${esc(name)} template" onclick="deleteTpl('${esc(name).replace(/'/g, "\\'")}')">${Icons.x}</button>`;
         list.appendChild(row);
       });
     }
@@ -3878,44 +3889,58 @@
         });
       }
 
-      // Init Tauri storage directories
-      await axisInit();
+      // Everything below touches storage, settings, and platform-specific
+      // APIs — none of it has been exercised on every target this app now
+      // runs on (Android in particular). A single unexpected throw here
+      // used to leave a permanently blank screen with no way to even see
+      // the app shell, since nothing after the failure point ever ran.
+      // Guard the whole sequence so a failure anywhere still gets you to
+      // a rendered (if possibly empty/default) app, rather than nothing.
+      try {
+        // Init Tauri storage directories
+        await axisInit();
 
-      // Restore settings (Tauri file or localStorage fallback)
-      const settings = await axisLoadSettings();
-      if (settings.theme === 'light') {
-        lightMode = true;
-        document.body.classList.add('light');
-        const btn = document.getElementById('theme-toggle-btn');
-        const emoji = btn?.querySelector('.tt-emoji');
-        const label = document.getElementById('tt-label');
-        if (emoji) emoji.innerHTML = Icons.sun;
-        if (label) label.textContent = 'Light';
-        if (btn) btn.title = 'Switch to dark mode';
-      }
-      if (settings.statMax === 100) {
-        statMax = 100;
-        const btn = document.getElementById('stat-max-btn');
-        if (btn) btn.textContent = 'Max Stat: 100';
-      }
-      // Always sync score filter ceiling to statMax so nothing is hidden on load
-      scoreFilterMax = statMax;
-      updateScoreFilterInputs();
-      if (settings.viewMode === 'list') {
-        viewMode = 'list';
-      }
+        // Restore settings (Tauri file or localStorage fallback)
+        const settings = await axisLoadSettings();
+        if (settings.theme === 'light') {
+          lightMode = true;
+          document.body.classList.add('light');
+          const btn = document.getElementById('theme-toggle-btn');
+          const emoji = btn?.querySelector('.tt-emoji');
+          const label = document.getElementById('tt-label');
+          if (emoji) emoji.innerHTML = Icons.sun;
+          if (label) label.textContent = 'Light';
+          if (btn) btn.title = 'Switch to dark mode';
+        }
+        if (settings.statMax === 100) {
+          statMax = 100;
+          const btn = document.getElementById('stat-max-btn');
+          if (btn) btn.textContent = 'Max Stat: 100';
+        }
+        // Always sync score filter ceiling to statMax so nothing is hidden on load
+        scoreFilterMax = statMax;
+        updateScoreFilterInputs();
+        if (settings.viewMode === 'list') {
+          viewMode = 'list';
+        }
 
-      // Load data
-      const loaded = await axisLoad();
-      items = loaded.items;
-      categories = loaded.categories;
+        // Load data
+        const loaded = await axisLoad();
+        items = loaded.items;
+        categories = loaded.categories;
 
-      // Which project is this? (name shown in header, used for export filenames)
-      await axisRefreshActiveProject();
+        // Which project is this? (name shown in header, used for export filenames)
+        await axisRefreshActiveProject();
+      } catch (e) {
+        console.error('[Axis] init failed, continuing with whatever state was loaded so far:', e);
+      }
 
       render();
 
-      // Silent update check — only surfaces the banner if a newer release exists
+      // Silent update check — only surfaces the banner if a newer release
+      // exists. Already self-contained (own try/catch), and deliberately
+      // outside the block above so a network hiccup here can never affect
+      // whether the app itself finishes loading.
       checkForUpdates(false);
     })();
 
