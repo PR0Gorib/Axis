@@ -397,6 +397,51 @@
       padding: 0;
     }
 
+    /* ── FOCUS VISIBILITY ──
+       A single default keyboard-focus ring for every interactive element —
+       buttons, links, chips, custom controls — so nothing relies on
+       whatever the browser/OS default happens to render (which varies, and
+       is sometimes invisible against this app's dark theme). Only fires
+       for keyboard/programmatic focus, not mouse clicks, so it doesn't
+       introduce the "outline flashes on every click" annoyance that led
+       inputs elsewhere to suppress :focus and roll their own border-color
+       change instead — those keep working exactly as before, this only
+       fills the gap everywhere else. */
+    :focus-visible {
+      outline: 2px solid var(--accent2);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    /* Elements that already sit flush against other UI (chips, small
+       icon-only buttons) get a tighter offset so the ring doesn't collide
+       with a neighbouring element or get clipped by a scroll container. */
+    .tag-chip:focus-visible,
+    .card-action-btn:focus-visible,
+    .cat-reorder-btn:focus-visible,
+    .cat-row-del:focus-visible,
+    .img-thumb-remove:focus-visible,
+    .img-thumb-nav button:focus-visible,
+    .project-btn:focus-visible,
+    .tpl-btn:focus-visible {
+      outline-offset: 1px;
+    }
+
+    .card:focus-visible {
+      outline-offset: -2px;
+      border-radius: 6px;
+    }
+
+    .lrow:focus-visible {
+      outline-offset: -2px;
+      border-radius: 4px;
+    }
+
+    .overall-item:focus-visible {
+      outline-offset: -2px;
+      border-radius: 0;
+    }
+
     body {
       font-family: 'Barlow', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
       background: var(--bg);
@@ -641,12 +686,16 @@
 
     .header-search .hs-count {
       position: absolute;
-      right: -46px;
+      left: 100%;
+      margin-left: 8px;
       top: 50%;
       transform: translateY(-50%);
       font-size: .7rem;
       color: var(--muted);
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 90px;
       pointer-events: none;
     }
 
@@ -3166,7 +3215,6 @@
     }
 
     button.tag-chip {
-      font: inherit;
       letter-spacing: inherit;
       text-transform: inherit;
     }
@@ -3196,7 +3244,6 @@
       border: none;
       padding: 0;
       color: inherit;
-      font: inherit;
     }
 
     .tag-chip .tag-x svg {

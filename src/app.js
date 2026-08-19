@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.7.1';
+    const APP_VERSION = '1.6.0';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
@@ -607,6 +607,26 @@
     function esc(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+
+    // Makes a non-button element (a card, row, etc. that already has a real
+    // onclick handler) reachable and operable by keyboard: focusable via
+    // Tab, announced as a button by assistive tech, and activated by
+    // Enter/Space the same way a native <button> would be. Call this right
+    // after setting el.onclick — it reads that same handler rather than
+    // taking a separate callback, so there's exactly one place defining
+    // what the element does.
+    function makeKeyboardClickable(el, label) {
+      el.tabIndex = 0;
+      el.setAttribute('role', 'button');
+      if (label) el.setAttribute('aria-label', label);
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.onclick?.(e);
+        }
+      });
+    }
+
     function linkify(text) {
       if (!text) return '';
       const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -935,6 +955,7 @@
         div.className = 'overall-item';
         div.dataset.id = item.id;
         div.onclick = () => openPanel(item.id);
+        makeKeyboardClickable(div, `${item.name}, rank ${i + 1}, score ${overallScore(item).toFixed(1)}`);
         div.innerHTML = `<div class="overall-rank">#${i + 1}</div>
       <div class="overall-name">${esc(item.name)}</div>
       <div class="overall-score">${overallScore(item).toFixed(1)}</div>`;
@@ -1064,6 +1085,7 @@
           if (bulkEditMode) { toggleBulkSelect(item.id); return; }
           openPanel(item.id);
         };
+        makeKeyboardClickable(card, `${item.name}, score ${score.toFixed(1)}`);
         grid.appendChild(card);
       });
 
@@ -1998,11 +2020,14 @@
         return;
       }
       list.innerHTML = '';
+      list.setAttribute('role', 'listbox');
       _switcherFiltered.forEach((project, i) => {
         const isActive = project.id === activeProjectId;
         const row = document.createElement('div');
         row.className = 'switcher-item' + (i === 0 ? ' selected' : '');
         row.dataset.idx = i;
+        row.setAttribute('role', 'option');
+        row.setAttribute('aria-selected', String(i === 0));
         row.innerHTML = `
           <span class="switcher-item-name">${esc(project.name)}</span>
           ${isActive ? '<span class="switcher-item-active">Current</span>' : ''}`;
@@ -2015,7 +2040,9 @@
       if (!_switcherFiltered.length) return;
       _switcherSelIdx = (_switcherSelIdx + delta + _switcherFiltered.length) % _switcherFiltered.length;
       document.querySelectorAll('.switcher-item').forEach(el => {
-        el.classList.toggle('selected', Number(el.dataset.idx) === _switcherSelIdx);
+        const isSel = Number(el.dataset.idx) === _switcherSelIdx;
+        el.classList.toggle('selected', isSel);
+        el.setAttribute('aria-selected', String(isSel));
       });
       document.querySelector('.switcher-item.selected')?.scrollIntoView({ block: 'nearest' });
     }
@@ -2751,6 +2778,7 @@
           if (bulkEditMode) { toggleBulkSelect(item.id); return; }
           openPanel(item.id);
         };
+        makeKeyboardClickable(row, `${item.name}, score ${overallScore(item).toFixed(1)}`);
         grid.appendChild(row);
       });
       grid.appendChild(makeAddCard());
