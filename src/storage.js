@@ -5,15 +5,22 @@
  * Directory layout on disk:
  *   %APPDATA%\Axis\
  *   ├── projects.json      manifest: { activeProjectId, projects: [{id,name,createdAt,lastOpenedAt}] }
- *   ├── settings.json      theme / statMax / viewMode — GLOBAL, shared by every project
+ *   ├── settings.json      theme / viewMode — GLOBAL, shared by every project
  *   └── projects\
  *       └── <project-id>\
- *           ├── data.json      this project's items + categories (image refs, not base64)
+ *           ├── data.json      this project's items + categories + statMax (image refs, not base64)
  *           ├── images\        one JPEG per item image, this project only
  *           └── backups\       ZIP snapshots for this project, auto-pruned to 10 most recent
  *
  * Category templates (axis_tpl) live in localStorage, not here — they're
  * intentionally global across all projects, same as settings.json.
+ *
+ * statMax (the 10 vs 100 scoring ceiling) is PER-PROJECT, stored in that
+ * project's data.json alongside items/categories — NOT in settings.json.
+ * Projects created before this feature existed have no statMax in their
+ * data.json; loadData() returns statMax: undefined for those, and the
+ * caller (app.js) falls back to whatever the old global setting was, read
+ * once, so existing projects don't silently jump back to the 0-10 default.
  *
  * How images work:
  *   IN MEMORY  → item.img / item.img2 / item.img3 / item.img4 / item.img5 = "data:image/jpeg;base64,..."
@@ -40,6 +47,16 @@
  *
  * exportXLSX() depends on the vendored xlsx.full.min.js (SheetJS, Apache-2.0)
  * being loaded via <script> BEFORE this file, so the global `XLSX` exists.
+ *
+ * Android (v1):
+ *   Everything above this line describes desktop behaviour only. On Android,
+ *   isTauri() is forced to false regardless of whether window.__TAURI__.fs
+ *   exists, so every function here automatically takes its existing
+ *   browser/localStorage fallback branch instead of the desktop fs/dialog
+ *   plugin path. This means on Android there are no real backups, no
+ *   projects, and export falls back to a plain download instead of a native
+ *   save dialog — all deliberate for v1, not bugs. Revisit isAndroid() below
+ *   once the mobile fs/dialog plugin path is worth building out.
  */
 
 const AxisStorage = (() => {
@@ -62,7 +79,16 @@ const AxisStorage = (() => {
   const fs   = () => window.__TAURI__?.fs;
   const path = () => window.__TAURI__?.path;
   const dlg  = () => window.__TAURI__?.dialog;
-  const isTauri = () => !!window.__TAURI__?.fs;
+
+  // Android detection — v1 of the Android build deliberately runs on the
+  // same localStorage-backed path already used in plain-browser mode,
+  // rather than the desktop fs/dialog plugins. Those plugins behave
+  // differently on Android (scoped storage, a system file-picker Intent
+  // instead of a simple path return) and getting that right is follow-up
+  // work, not a v1 blocker — see isTauri() below, which is the single
+  // choke point every save/load/backup/export function already checks.
+  const isAndroid = () => /Android/i.test(navigator.userAgent || '');
+  const isTauri = () => !isAndroid() && !!window.__TAURI__?.fs;
 
   // ── Path helpers ──────────────────────────────────────────────────────────
   async function join(...parts) {
@@ -180,7 +206,9 @@ const AxisStorage = (() => {
       } catch(e) { /* no old backups dir — fine */ }
     } else {
       // Genuinely fresh install — write an empty data.json so this project
-      // behaves identically to any other from the very first load.
+      // behaves identically to any other from the very first load. No
+      // legacy statMax to inherit here (nothing existed before this
+      // project), so it's left unset and the app default (10) applies.
       await fs().writeTextFile(await join(projDir, 'data.json'), JSON.stringify({ items: [], categories: [] }, null, 2));
     }
 
@@ -297,11 +325,11 @@ const AxisStorage = (() => {
    * Images that are still base64 get written as files automatically.
    * Returns true on success.
    */
-  async function saveData(items, categories) {
+  async function saveData(items, categories, statMax) {
     if (!isTauri()) {
       // Browser fallback — use localStorage
       try {
-        localStorage.setItem('axis', JSON.stringify({ items, categories }));
+        localStorage.setItem('axis', JSON.stringify({ items, categories, statMax }));
         return true;
       } catch(e) { return false; }
     }
@@ -316,7 +344,7 @@ const AxisStorage = (() => {
         if (copy.img5?.startsWith('data:')) copy.img5 = await saveImage(copy.img5, copy.id + '_5');
         return copy;
       }));
-      const json = JSON.stringify({ items: serializable, categories }, null, 2);
+      const json = JSON.stringify({ items: serializable, categories, statMax }, null, 2);
       await fs().writeTextFile(await join(_dataDir, 'data.json'), json);
       return true;
     } catch(e) {
@@ -327,9 +355,13 @@ const AxisStorage = (() => {
 
   // ── LOAD ──────────────────────────────────────────────────────────────────
   /**
-   * Load items + categories from disk.
+   * Load items + categories + statMax from disk.
    * Image filenames are expanded back to base64 data URLs.
-   * Returns { items, categories } or null on failure.
+   * statMax is per-project (lives in data.json, not settings.json) — see
+   * the file header. Returns { items, categories, statMax } where statMax
+   * is undefined if this project's data.json predates the per-project
+   * scale feature; the caller falls back to the legacy global setting.
+   * Returns null on failure.
    */
   async function loadData() {
     if (!isTauri()) {
@@ -338,7 +370,7 @@ const AxisStorage = (() => {
         const raw = localStorage.getItem('axis');
         if (!raw) return null;
         const d = JSON.parse(raw);
-        return { items: d.items || [], categories: d.categories || [] };
+        return { items: d.items || [], categories: d.categories || [], statMax: d.statMax };
       } catch(e) { return null; }
     }
     try {
@@ -353,7 +385,7 @@ const AxisStorage = (() => {
         if (item.img5 && !item.img5.startsWith('data:')) item.img5 = await loadImage(item.img5) || item.img5;
         return item;
       }));
-      return { items, categories: d.categories || [] };
+      return { items, categories: d.categories || [], statMax: d.statMax };
     } catch(e) {
       console.error('[AxisStorage] loadData failed:', e);
       return null;
@@ -362,8 +394,14 @@ const AxisStorage = (() => {
 
   // ── SETTINGS ──────────────────────────────────────────────────────────────
   /**
-   * Save app settings (theme, statMax, viewMode) to settings.json.
-   * Falls back to localStorage in browser.
+   * Save app settings (theme, viewMode) to settings.json. Falls back to
+   * localStorage in browser.
+   *
+   * statMax may still be passed in and will be persisted here too, but only
+   * as a LEGACY value: since statMax became per-project (stored in each
+   * project's data.json), nothing reads it back out of settings.json except
+   * the one-time migration path in app.js for projects that predate that
+   * change. Don't add new statMax reads against loadSettings().
    */
   async function saveSettings(settings) {
     if (!isTauri()) {
@@ -388,6 +426,7 @@ const AxisStorage = (() => {
 
   /**
    * Load app settings. Returns object with defaults on failure.
+   * statMax here is the LEGACY global value only — see saveSettings() above.
    */
   async function loadSettings() {
     const defaults = { theme: 'dark', statMax: 10, viewMode: 'grid' };

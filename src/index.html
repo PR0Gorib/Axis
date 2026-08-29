@@ -47,7 +47,7 @@
 
   <!-- HAMBURGER DRAWER -->
   <div id="ham-overlay" onclick="closeHamMenu()"></div>
-  <div id="ham-drawer" role="dialog" aria-label="Menu">
+  <div id="ham-drawer" role="dialog" aria-modal="true" aria-label="Menu">
     <div id="ham-header">
       <span>Menu</span>
       <button id="ham-close-btn" onclick="closeHamMenu()" title="Close" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
@@ -96,7 +96,7 @@
       <div class="ham-hint">When on, nothing is saved to disk. Data is cleared when you close the app.</div>
     </div>
 
-    <div id="ham-version">Axis v1.4.0</div>
+    <div id="ham-version">Axis v1.7.1</div>
   </div>
 
   <div id="toolbar">
@@ -168,7 +168,7 @@
 
   <!-- SIDE PANEL -->
   <div id="panel-overlay" onclick="closePanel()"></div>
-  <div id="panel">
+  <div id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-name">
     <div id="panel-close">
       <div style="display:flex;flex-direction:column;gap:1px;">
         <h3 id="panel-name"></h3>
@@ -205,7 +205,7 @@
 
   <!-- ADD / EDIT MODAL -->
   <div id="modal-overlay">
-    <div id="modal">
+    <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div id="modal-header">
         <h2 id="modal-title">Add Item</h2>
         <button class="btn small" onclick="closeModal()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
@@ -261,9 +261,9 @@
 
   <!-- CATEGORIES MODAL -->
   <div id="cat-modal-overlay">
-    <div id="cat-modal">
+    <div id="cat-modal" role="dialog" aria-modal="true" aria-labelledby="cat-modal-title">
       <div id="cat-modal-header">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Categories</h2>
+        <h2 id="cat-modal-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Categories</h2>
         <div style="display:flex;gap:6px;align-items:center;">
           <button class="btn small" id="stat-max-btn" onclick="toggleStatMax()">Max Stat: 10</button>
           <button class="btn small" onclick="closeCatModal()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
@@ -287,9 +287,9 @@
 
   <!-- BACKUP MODAL -->
   <div id="backup-modal-overlay">
-    <div id="backup-modal">
+    <div id="backup-modal" role="dialog" aria-modal="true" aria-labelledby="backup-modal-title">
       <div id="backup-modal-header">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Backups</h2>
+        <h2 id="backup-modal-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Backups</h2>
         <button class="btn small" onclick="closeBackupModal()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div id="backup-modal-hint">
@@ -303,9 +303,9 @@
 
   <!-- SETTINGS MODAL -->
   <div id="settings-modal-overlay">
-    <div id="settings-modal">
+    <div id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
       <div id="settings-modal-header">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> Settings</h2>
+        <h2 id="settings-modal-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> Settings</h2>
         <button class="btn small" onclick="closeSettingsModal()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div id="settings-body">
@@ -364,7 +364,7 @@
         <div class="settings-section">
           <div class="settings-section-title">About</div>
           <div id="settings-about">
-            <div id="settings-about-version">Axis v1.6.0</div>
+            <div id="settings-about-version">Axis v1.7.1</div>
             <div id="settings-about-desc">A general purpose comparison &amp; ranking tool.</div>
             <div id="settings-about-credit">Made with ❤️ by PR0Gorib</div>
             <div id="settings-about-links">
@@ -387,7 +387,7 @@
 
   <!-- PROJECT QUICK SWITCHER (Ctrl/Cmd+K) -->
   <div id="switcher-overlay" onclick="if(event.target===this)closeProjectSwitcher()">
-    <div id="switcher-box" role="dialog" aria-label="Switch project">
+    <div id="switcher-box" role="dialog" aria-modal="true" aria-label="Switch project">
       <div id="switcher-input-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input type="text" id="switcher-input" placeholder="Jump to project..." aria-label="Jump to project" autocomplete="off" spellcheck="false"
@@ -404,9 +404,9 @@
 
   <!-- PROJECTS MODAL -->
   <div id="projects-modal-overlay">
-    <div id="projects-modal">
+    <div id="projects-modal" role="dialog" aria-modal="true" aria-labelledby="projects-modal-title">
       <div id="projects-modal-header">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg> Projects</h2>
+        <h2 id="projects-modal-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg> Projects</h2>
         <button class="btn small" onclick="closeProjectsModal()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div id="projects-modal-hint">
@@ -421,9 +421,9 @@
   </div>
 
   <!-- COMPARE MODAL -->
-  <div id="cmp-overlay">
+  <div id="cmp-overlay" role="dialog" aria-modal="true" aria-labelledby="cmp-title">
     <div id="cmp-header">
-      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg> Side-by-Side Comparison</h2>
+      <h2 id="cmp-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg> Side-by-Side Comparison</h2>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn small" id="cmp-radar-toggle" onclick="toggleCmpRadar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10l7.07 7.07"/><path d="M12 12 4.93 19.07"/><circle cx="12" cy="12" r="10"/></svg> Radar</button>
         <button class="btn small" id="cmp-bars-toggle" onclick="toggleCmpBars()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg> Bars</button>
@@ -445,9 +445,9 @@
   </div>
 
   <!-- RADAR ZOOM (full-screen) -->
-  <div id="radar-zoom-overlay">
+  <div id="radar-zoom-overlay" role="dialog" aria-modal="true" aria-labelledby="radar-zoom-title">
     <div id="radar-zoom-header">
-      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10l7.07 7.07"/><path d="M12 12 4.93 19.07"/><circle cx="12" cy="12" r="10"/></svg> Radar — Full View</h2>
+      <h2 id="radar-zoom-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10l7.07 7.07"/><path d="M12 12 4.93 19.07"/><circle cx="12" cy="12" r="10"/></svg> Radar — Full View</h2>
       <button class="btn small" onclick="closeRadarZoom()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Close</button>
     </div>
     <div id="radar-zoom-wrap">
@@ -459,9 +459,9 @@
   <!-- BULK IMPORT PROGRESS MODAL -->
   <div id="bulk-overlay"
     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:center;justify-content:center;">
-    <div id="bulk-modal"
+    <div id="bulk-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-modal-title"
       style="background:var(--surface);border:1px solid var(--border);border-radius:6px;width:100%;max-width:420px;padding:24px;">
-      <div
+      <div id="bulk-modal-title"
         style="font-family:'Barlow Condensed', sans-serif;font-weight:900;font-size:1.1rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:16px;">
         ⊕ Added Images</div>
       <div id="bulk-progress-wrap"
@@ -482,7 +482,7 @@
   </div>
 
   <!-- FULLSCREEN VIEWER -->
-  <div id="viewer-overlay" onclick="closeViewer(event)">
+  <div id="viewer-overlay" role="dialog" aria-modal="true" aria-label="Image viewer" onclick="closeViewer(event)">
     <img id="viewer-img" src="" alt="" onclick="event.stopPropagation()">
     <div id="viewer-controls">
       <button class="btn small" onclick="viewerZoom(-0.25);event.stopPropagation()">− Zoom</button>

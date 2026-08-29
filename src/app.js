@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.6.0';
+    const APP_VERSION = '1.7.1';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
@@ -52,11 +52,11 @@
         if (raw) {
           const d = JSON.parse(raw);
           if (d?.items || d?.categories) {
-            return { items: d.items || [], categories: d.categories || [] };
+            return { items: d.items || [], categories: d.categories || [], statMax: d.statMax };
           }
         }
       } catch (e) { }
-      return { items: [], categories: [] };
+      return { items: [], categories: [], statMax: undefined };
     }
 
     // Thin load() wrapper — used by toggleIncognito to restore data
@@ -64,6 +64,10 @@
       const data = await axisLoad();
       items = data.items;
       categories = data.categories;
+      // statMax is per-project — see the STAT MAX TOGGLE section below for
+      // the same undefined-means-inherit-legacy-default fallback used here.
+      statMax = data.statMax ?? statMax;
+      scoreFilterMax = statMax;
     }
 
     async function axisSave(itemsArr, catsArr) {
@@ -78,10 +82,10 @@
         try { await AxisStorage.createBackup(); } catch (e) { console.error('[Axis] backup failed:', e); }
       }
       try {
-        await AxisStorage.saveData(itemsArr, catsArr);
+        await AxisStorage.saveData(itemsArr, catsArr, statMax);
       } catch (e) {
         // Disk write failed → fall back to localStorage so data is never lost
-        try { localStorage.setItem('axis', JSON.stringify({ items: itemsArr, categories: catsArr })); } catch (_) { }
+        try { localStorage.setItem('axis', JSON.stringify({ items: itemsArr, categories: catsArr, statMax })); } catch (_) { }
         console.error('[Axis] saveData failed, fell back to localStorage:', e);
       }
       // !! Do NOT mutate itemsArr here — items keep base64 in memory for display.
@@ -93,7 +97,12 @@
       return AxisStorage.loadSettings();
     }
 
-    // Partial update — caller passes only the keys that changed
+    // Partial update — caller passes only the keys that changed. statMax is
+    // still included here even though it's now per-project (saved via
+    // axisSave, not this function) — see storage.js's saveSettings() doc:
+    // it's written as a LEGACY value only, read back once by the migration
+    // path in the init sequence above for projects that predate the
+    // per-project change, and otherwise ignored.
     async function axisSaveSettings(partial) {
       const current = {
         theme: lightMode ? 'light' : 'dark',
@@ -108,8 +117,9 @@
     // own items, categories, images, backups) — e.g. "Games", "Movies",
     // "Restaurants". Exactly one is active at a time; switching repoints
     // storage.js at the new one and reloads items/categories into memory.
-    // Everything else (theme, stat scale, view mode, templates, incognito)
-    // stays global across every project, by design.
+    // Theme, view mode, templates, and incognito stay global across every
+    // project, by design. The stat scale (statMax) does NOT — it's
+    // per-project, reloaded alongside items/categories on every switch.
 
     // Refreshes the cached { id, name } for whichever project is currently
     // active. Call after init and after any create/rename/switch/delete.
@@ -132,8 +142,10 @@
     // Clears everything that's meaningful only within the PREVIOUS project's
     // item set — stale selections, search text, filters, sort, and any open
     // panel/modal — so nothing from one project bleeds into another. Global
-    // preferences (theme, statMax, viewMode, incognito, templates) are
-    // deliberately left untouched.
+    // preferences (theme, viewMode, incognito, templates) are deliberately
+    // left untouched. statMax is NOT global — it's reset by the caller
+    // (_loadActiveProjectIntoMemory) before this runs, since it's part of
+    // the project being switched to, not a shared app preference.
     function _resetProjectScopedUIState() {
       compareSet.clear();
       renderCompareBar();
@@ -161,6 +173,15 @@
       const loaded = await axisLoad();
       items = loaded.items;
       categories = loaded.categories;
+      // statMax is per-project. Projects created before this feature
+      // existed have no statMax of their own — rather than silently
+      // resetting those to the app default (10) every time you switch to
+      // them, keep whatever scale was active a moment ago. Projects that
+      // DO have a saved statMax (including ones you've since changed the
+      // scale on) always use their own value.
+      statMax = loaded.statMax ?? statMax;
+      const statBtn = document.getElementById('stat-max-btn');
+      if (statBtn) statBtn.textContent = `Max Stat: ${statMax}`;
       await axisRefreshActiveProject();
       _resetProjectScopedUIState();
       render();
@@ -625,6 +646,83 @@
           el.onclick?.(e);
         }
       });
+    }
+
+    // ── FOCUS TRAPPING ──────────────────────────────────
+    // Keeps keyboard focus inside a modal/panel/drawer while it's open, so
+    // Tab and Shift+Tab cycle through only what's visible in that surface
+    // instead of leaking out to the grid underneath. One trap is active at
+    // a time — opening a second (e.g. Categories from within Settings)
+    // releases the first automatically, and closing the second restores
+    // focus back into the first rather than all the way out to the page,
+    // since _focusStack below preserves that chain.
+    let _activeFocusTrap = null;   // { container, handler, previouslyFocused }
+    const _focusStack = [];        // elements to restore through, most-recent last
+
+    const FOCUSABLE_SELECTOR = [
+      'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+      'select:not([disabled])', 'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+
+    function _getFocusable(container) {
+      return [...container.querySelectorAll(FOCUSABLE_SELECTOR)]
+        .filter(el => el.offsetParent !== null); // visible only
+    }
+
+    // Call when a modal/panel/drawer opens. `container` is the element that
+    // scopes the trap (usually the inner box, e.g. #modal, not the overlay
+    // backdrop). `preferredFocusId`, if given and found, receives initial
+    // focus (e.g. a name field); otherwise the first focusable element in
+    // the container is used, falling back to the container itself.
+    function trapFocus(container, preferredFocusId) {
+      if (!container) return;
+      if (_activeFocusTrap) _focusStack.push(_activeFocusTrap);
+
+      const previouslyFocused = document.activeElement;
+      const handler = e => {
+        if (e.key !== 'Tab') return;
+        const focusable = _getFocusable(container);
+        if (!focusable.length) { e.preventDefault(); return; }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      };
+      container.addEventListener('keydown', handler);
+      _activeFocusTrap = { container, handler, previouslyFocused };
+
+      const preferred = preferredFocusId && document.getElementById(preferredFocusId);
+      const target = (preferred && preferred.offsetParent !== null)
+        ? preferred
+        : (_getFocusable(container)[0] || container);
+      // If we're falling back to the container itself (no focusable child
+      // found), it needs a tabindex to be focusable at all — native
+      // elements like <div> aren't by default.
+      if (target === container && !container.hasAttribute('tabindex')) {
+        container.setAttribute('tabindex', '-1');
+      }
+      setTimeout(() => target.focus(), 50);
+    }
+
+    // Call when that same modal/panel/drawer closes. Tears down the
+    // listener and restores focus either to whatever was focused right
+    // before this trap opened, or — if another trap was underneath it
+    // (a modal opened from within another modal) — reactivates that one
+    // instead of dropping focus out to the page.
+    function releaseFocus(container) {
+      if (!_activeFocusTrap || _activeFocusTrap.container !== container) return;
+      _activeFocusTrap.container.removeEventListener('keydown', _activeFocusTrap.handler);
+      const toRestore = _activeFocusTrap.previouslyFocused;
+      _activeFocusTrap = _focusStack.pop() || null;
+      if (toRestore && document.body.contains(toRestore) && toRestore.offsetParent !== null) {
+        toRestore.focus();
+      } else if (_activeFocusTrap) {
+        _activeFocusTrap.container.focus?.();
+      }
     }
 
     function linkify(text) {
@@ -1182,10 +1280,12 @@
 
       document.getElementById('panel-overlay').classList.add('open');
       document.getElementById('panel').classList.add('open');
+      trapFocus(document.getElementById('panel'));
     }
     function closePanel() {
       document.getElementById('panel-overlay').classList.remove('open');
       document.getElementById('panel').classList.remove('open');
+      releaseFocus(document.getElementById('panel'));
     }
 
     // ── COMPARE VIEW ───────────────────────────────────
@@ -1223,6 +1323,7 @@
       if (!overlay) return;
       overlay.classList.add('open');
       redrawRadarZoom();
+      trapFocus(overlay);
 
       // Re-layout on resize while the zoom view is open (window resize,
       // or rotating a tablet) — capped with a small debounce
@@ -1233,7 +1334,7 @@
 
     function closeRadarZoom() {
       const overlay = document.getElementById('radar-zoom-overlay');
-      if (overlay) overlay.classList.remove('open');
+      if (overlay) { overlay.classList.remove('open'); releaseFocus(overlay); }
       if (_radarZoomResizeHandler) {
         window.removeEventListener('resize', _radarZoomResizeHandler);
         _radarZoomResizeHandler = null;
@@ -1605,10 +1706,12 @@
       });
 
       document.getElementById('cmp-overlay').classList.add('open');
+      trapFocus(document.getElementById('cmp-overlay'));
     }
     function closeCompare() {
       document.getElementById('cmp-overlay').classList.remove('open');
       closeRadarZoom();
+      releaseFocus(document.getElementById('cmp-overlay'));
     }
 
     // ── ADD / EDIT MODAL ───────────────────────────────
@@ -1624,7 +1727,7 @@
       renderTagInputChips();
       buildStatFields({});
       document.getElementById('modal-overlay').classList.add('open');
-      setTimeout(() => document.getElementById('f-name').focus(), 50);
+      trapFocus(document.getElementById('modal'), 'f-name');
     }
 
     function openEditModal(id) {
@@ -1644,11 +1747,12 @@
       renderTagInputChips();
       buildStatFields(item.stats || {}, item.statNotes || {});
       document.getElementById('modal-overlay').classList.add('open');
-      setTimeout(() => document.getElementById('f-name').focus(), 50);
+      trapFocus(document.getElementById('modal'), 'f-name');
     }
 
     function closeModal() {
       document.getElementById('modal-overlay').classList.remove('open');
+      releaseFocus(document.getElementById('modal'));
       pendingImages = [];
     }
 
@@ -1839,18 +1943,22 @@
       const overlay = document.getElementById('backup-modal-overlay');
       overlay.classList.add('open');
       await renderBackupList();
+      trapFocus(document.getElementById('backup-modal'));
     }
     function closeBackupModal() {
       document.getElementById('backup-modal-overlay').classList.remove('open');
+      releaseFocus(document.getElementById('backup-modal'));
     }
 
     // ── SETTINGS ─────────────────────────────────────────
     function openSettingsModal() {
       _syncSettingsUI();
       document.getElementById('settings-modal-overlay').classList.add('open');
+      trapFocus(document.getElementById('settings-modal'));
     }
     function closeSettingsModal() {
       document.getElementById('settings-modal-overlay').classList.remove('open');
+      releaseFocus(document.getElementById('settings-modal'));
     }
 
     // Keeps the Settings panel's controls showing the correct current state.
@@ -1975,9 +2083,11 @@
     async function openProjectsModal() {
       document.getElementById('projects-modal-overlay').classList.add('open');
       await renderProjectsList();
+      trapFocus(document.getElementById('projects-modal'));
     }
     function closeProjectsModal() {
       document.getElementById('projects-modal-overlay').classList.remove('open');
+      releaseFocus(document.getElementById('projects-modal'));
     }
 
     // ── PROJECT QUICK SWITCHER (Ctrl/Cmd+K) ─────────────
@@ -1999,11 +2109,12 @@
       overlay.classList.add('open');
       input.value = '';
       _renderSwitcherList('');
-      setTimeout(() => input.focus(), 30);
+      trapFocus(document.getElementById('switcher-box'), 'switcher-input');
     }
 
     function closeProjectSwitcher() {
       document.getElementById('switcher-overlay').classList.remove('open');
+      releaseFocus(document.getElementById('switcher-box'));
     }
 
     function _renderSwitcherList(query) {
@@ -2155,10 +2266,11 @@
       renderCatList();
       renderTplList();
       document.getElementById('cat-modal-overlay').classList.add('open');
-      setTimeout(() => document.getElementById('cat-new-input').focus(), 50);
+      trapFocus(document.getElementById('cat-modal'), 'cat-new-input');
     }
     function closeCatModal() {
       document.getElementById('cat-modal-overlay').classList.remove('open');
+      releaseFocus(document.getElementById('cat-modal'));
       render();
     }
     function renderCatList() {
@@ -2323,11 +2435,13 @@
     function openHamMenu() {
       document.getElementById('ham-overlay').classList.add('open');
       document.getElementById('ham-drawer').classList.add('open');
+      trapFocus(document.getElementById('ham-drawer'));
     }
     function closeHamMenu() {
       closeHamExportMenu();
       document.getElementById('ham-overlay').classList.remove('open');
       document.getElementById('ham-drawer').classList.remove('open');
+      releaseFocus(document.getElementById('ham-drawer'));
     }
     // Close on Escape
     document.addEventListener('keydown', e => {
@@ -2484,6 +2598,7 @@
       confirmBtn.style.display = 'none';
       cancelBtn.textContent = 'Cancel';
       overlay.style.display = 'flex';
+      trapFocus(document.getElementById('bulk-modal'));
 
       let done = 0;
 
@@ -2556,6 +2671,7 @@
 
     function closeBulkModal() {
       document.getElementById('bulk-overlay').style.display = 'none';
+      releaseFocus(document.getElementById('bulk-modal'));
       bulkQueue = [];
     }
 
@@ -2706,11 +2822,15 @@
       const img = document.getElementById('viewer-img');
       img.src = src;
       img.style.transform = 'scale(1)';
-      document.getElementById('viewer-overlay').classList.add('open');
+      const overlay = document.getElementById('viewer-overlay');
+      overlay.classList.add('open');
+      trapFocus(overlay);
     }
     function closeViewer(e) {
-      if (e && e.target !== document.getElementById('viewer-overlay')) return;
-      document.getElementById('viewer-overlay').classList.remove('open');
+      const overlay = document.getElementById('viewer-overlay');
+      if (e && e.target !== overlay) return;
+      overlay.classList.remove('open');
+      releaseFocus(overlay);
     }
     function viewerZoom(delta) {
       viewerScale = Math.max(0.5, Math.min(5, viewerScale + delta));
@@ -2898,6 +3018,8 @@
     }
 
     // ── STAT MAX TOGGLE ────────────────────────────────
+    // statMax is per-project, saved as part of this project's data.json via
+    // axisSave (same place items/categories live) — not settings.json.
     function toggleStatMax() {
       statMax = statMax === 10 ? 100 : 10;
       const btn = document.getElementById('stat-max-btn');
@@ -2914,7 +3036,7 @@
       }
       updateScoreFilterInputs();
       renderGrid(); renderOverall(); renderStatsBar();
-      axisSaveSettings({ statMax });
+      if (!incognitoMode) axisSave(items, categories);
       showToast(`Max stat set to ${statMax}`);
       _syncSettingsUI();
     }
@@ -3842,8 +3964,7 @@
           return;
         }
         closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal();
-        closeSettingsModal(); closeProjectsModal();
-        document.getElementById('viewer-overlay').classList.remove('open');
+        closeSettingsModal(); closeProjectsModal(); closeViewer();
         if (bulkEditMode) exitBulkEditMode();
       }
       // Ctrl/Cmd+K opens the project quick switcher. Skipped while typing in
@@ -3940,14 +4061,13 @@
           if (label) label.textContent = 'Light';
           if (btn) btn.title = 'Switch to dark mode';
         }
-        if (settings.statMax === 100) {
-          statMax = 100;
-          const btn = document.getElementById('stat-max-btn');
-          if (btn) btn.textContent = 'Max Stat: 100';
-        }
-        // Always sync score filter ceiling to statMax so nothing is hidden on load
-        scoreFilterMax = statMax;
-        updateScoreFilterInputs();
+        // statMax used to be a single global setting (settings.json). It's
+        // now per-project, stored in each project's data.json alongside
+        // items/categories. We don't yet know which value to use here — that
+        // depends on THIS project's data.json, loaded just below — so hold
+        // settings.statMax aside as the legacy fallback for projects that
+        // predate the per-project change, rather than applying it directly.
+        const legacyStatMax = settings.statMax === 100 ? 100 : 10;
         if (settings.viewMode === 'list') {
           viewMode = 'list';
         }
@@ -3956,6 +4076,16 @@
         const loaded = await axisLoad();
         items = loaded.items;
         categories = loaded.categories;
+        // This project's own statMax if it has one; otherwise inherit the
+        // old global value once so existing projects don't silently reset
+        // to the 0-10 default. New projects with no legacy setting either
+        // just get the app default (10) from statMax's initial declaration.
+        statMax = loaded.statMax ?? legacyStatMax;
+        const statBtn = document.getElementById('stat-max-btn');
+        if (statBtn) statBtn.textContent = `Max Stat: ${statMax}`;
+        // Always sync score filter ceiling to statMax so nothing is hidden on load
+        scoreFilterMax = statMax;
+        updateScoreFilterInputs();
 
         // Which project is this? (name shown in header, used for export filenames)
         await axisRefreshActiveProject();
