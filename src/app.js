@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.7.1';
+    const APP_VERSION = '1.6.0';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
@@ -3036,7 +3036,7 @@
       }
       updateScoreFilterInputs();
       renderGrid(); renderOverall(); renderStatsBar();
-      if (!incognitoMode) axisSave(items, categories);
+      save();
       showToast(`Max stat set to ${statMax}`);
       _syncSettingsUI();
     }
@@ -3139,7 +3139,8 @@
       const minEl = document.getElementById('sf-min-range');
       const maxEl = document.getElementById('sf-max-range');
       scoreFilterMin = parseFloat(minEl.value) || 0;
-      scoreFilterMax = parseFloat(maxEl.value) ?? statMax;
+      const parsedMax = parseFloat(maxEl.value);
+      scoreFilterMax = isNaN(parsedMax) ? statMax : parsedMax;
       if (scoreFilterMax > statMax) { maxEl.value = statMax; scoreFilterMax = statMax; }
       if (scoreFilterMin < 0) { minEl.value = 0; scoreFilterMin = 0; }
       syncScoreFilterUI();
