@@ -484,6 +484,27 @@
       animation: card-enter .3s cubic-bezier(.4, 0, .2, 1);
     }
 
+    /* ── GRID / LIST VIEW-MODE SWITCH ──
+       Grid cards and list rows are structurally different layouts, so a
+       per-item FLIP glide (like reordering/filtering above) doesn't apply
+       here — there's no coherent path from a small square card to a wide
+       thin row. Instead, toggleView() briefly adds '.view-switching' to
+       #grid to fade+settle the outgoing layout down, swaps the DOM to the
+       new view via the normal render, then removes the class on the next
+       frame so the incoming layout fades+settles in. Both directions use
+       the same two keyframes; which one plays is just whichever state the
+       class transitions from/to. */
+    #grid.view-switching {
+      opacity: 0;
+      transform: scale(.98);
+    }
+    #grid:not(.view-switching) {
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    #grid.view-switching {
+      transition: opacity .12s ease, transform .12s ease;
+    }
+
     #panel-bio {
       font-family: 'Barlow', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }

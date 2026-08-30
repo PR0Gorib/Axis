@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.6.0';
+    const APP_VERSION = '1.7.1';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
@@ -1111,7 +1111,13 @@
     function renderGrid() {
       const grid = document.getElementById('grid');
       const empty = document.getElementById('empty');
-      const prevRects = captureFlipState(grid);
+      // Skip the per-item FLIP capture while a grid/list mode crossfade is
+      // in progress (see toggleView) — matching cards to rows by data-id
+      // would try to glide-transform between two incompatible layouts,
+      // which looks broken rather than smooth. The container-level fade
+      // already covers this transition on its own.
+      const switching = grid.classList.contains('view-switching');
+      const prevRects = switching ? null : captureFlipState(grid);
       grid.innerHTML = '';
 
       const filtered = getFilteredItems();
@@ -2851,10 +2857,32 @@
     // ── LIST VIEW ──────────────────────────────────────
     let viewMode = 'grid';
 
+    // Fade the grid out, swap DOM to the new view mode, fade it back in.
+    // See the '#grid.view-switching' comment in styles.css for why this is
+    // a container-level crossfade rather than the per-item FLIP glide used
+    // for reordering/filtering — grid cards and list rows don't share a
+    // layout a single element could animate between.
     function toggleView() {
       viewMode = viewMode === 'grid' ? 'list' : 'grid';
-      renderGrid();
-      renderSortBar();
+      const grid = document.getElementById('grid');
+
+      if (_reducedMotion || !grid) {
+        renderGrid();
+        renderSortBar();
+        axisSaveSettings({ viewMode });
+        return;
+      }
+
+      grid.classList.add('view-switching');
+      setTimeout(() => {
+        renderGrid();
+        renderSortBar();
+        // Force a reflow so the browser registers the new (still-hidden)
+        // layout before we remove the class, otherwise the fade-in gets
+        // batched with the DOM swap and never actually plays.
+        void grid.offsetWidth;
+        grid.classList.remove('view-switching');
+      }, 120);
       axisSaveSettings({ viewMode });
     }
 
