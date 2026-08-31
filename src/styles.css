@@ -177,13 +177,23 @@
     }
 
     body.light .btn.primary:hover {
-      background: #962038;
-      border-color: #962038;
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
     }
 
     body.light .btn.accent2 {
       border-color: var(--accent2);
       color: var(--accent2);
+    }
+
+    /* Without this, the generic `body.light .btn:hover` rule above wins on
+       specificity (body adds an extra point that `.btn.accent2:hover`
+       alone doesn't have) and overrides accent2 buttons back to the
+       primary --accent color on hover — a secondary-accent button
+       shouldn't flip to the primary accent just because it's light mode. */
+    body.light .btn.accent2:hover {
+      background: var(--accent2);
+      color: #000;
     }
 
     body.light .btn.danger {
@@ -4226,13 +4236,22 @@
     }
 
 
-    /* ── SCORE THRESHOLDS ── */
+    /* ── SCORE THRESHOLDS ──
+       Traffic-light ranking indicator: top third of items = tier-high,
+       middle third = tier-mid, bottom third = tier-low. tier-low stays a
+       fixed --danger red in every accent theme, same reasoning as the
+       delete button — "worst tier" is a warning signal, not a branding
+       choice. tier-high and tier-mid are theme-derived instead: tier-high
+       is --accent2 (already the case), and tier-mid sits at the midpoint
+       between --accent and --accent2 via color-mix, so as those two shift
+       with the active theme, the "middle" tier visually sits between them
+       rather than clashing as an unrelated fixed amber would. */
     .card.tier-high {
       border-left: 3px solid var(--accent2);
     }
 
     .card.tier-mid {
-      border-left: 3px solid #e2a23d;
+      border-left: 3px solid color-mix(in srgb, var(--accent), var(--accent2));
     }
 
     .card.tier-low {
@@ -4244,20 +4263,15 @@
     }
 
     .lrow.tier-mid {
-      border-left: 3px solid #e2a23d;
+      border-left: 3px solid color-mix(in srgb, var(--accent), var(--accent2));
     }
 
     .lrow.tier-low {
       border-left: 3px solid var(--danger);
     }
 
-    body.light .card.tier-mid {
-      border-left-color: #b8780a;
-    }
-
-    body.light .lrow.tier-mid {
-      border-left-color: #b8780a;
-    }
+    /* No light-mode override needed for tier-mid — color-mix() already
+       reads light mode's own --accent/--accent2 values automatically. */
 
     /* The generic `body.light .card`/`.lrow` rules above set border-color
        (all 4 sides) with higher specificity (extra `body` element) than the
@@ -4267,6 +4281,11 @@
     body.light .card.tier-high,
     body.light .lrow.tier-high {
       border-left-color: var(--accent2);
+    }
+
+    body.light .card.tier-mid,
+    body.light .lrow.tier-mid {
+      border-left-color: color-mix(in srgb, var(--accent), var(--accent2));
     }
 
     body.light .card.tier-low,
