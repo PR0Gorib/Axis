@@ -11,18 +11,67 @@
       /* Original border */
       --accent: #d94f5c;
       /* Muted rose-red */
+      --accent-rgb: 217, 79, 92;
+      --accent-hover: #e05f6c;
+      /* Lighter rose-red, hover/gradient-end shade */
       --accent2: #4ae8c9;
       /* Original teal */
+      --accent2-rgb: 74, 232, 201;
       --text: #e8e8ec;
       /* Original soft white */
       --muted: #6b6b7a;
       /* Original muted */
       --danger: #e85555;
       /* Warm red */
+      --danger-rgb: 232, 85, 85;
       --panel-w: 420px;
       --rank1: #ffd700;
       --rank2: #c0c0c0;
       --rank3: #cd7f32;
+    }
+
+    /* ── ACCENT COLOR THEMES ──
+       --accent/--accent2 (plus their -rgb and -hover companions) drive
+       nearly every highlight, active-state, hover, and tinted-background
+       color in the app — borders, buttons, badges, focus rings, the logo,
+       tag chips, score gradients. The default palette above is "Red"
+       (rose-red + teal) — the original, unchanged look. Each alternate
+       theme below is built to match that original pairing's restraint:
+       every primary/secondary hue here sits at roughly the same
+       saturation and lightness band as the original rose-red/teal
+       (moderate-to-high saturation, mid-to-upper lightness, never neon),
+       so switching themes changes the hue without changing the app's
+       overall visual "temperature" or level of polish.
+         Plum    → muted plum-violet (cool-leaning) + warm amber-gold —
+                   moody and editorial rather than bright/synthwave purple
+         Forest  → muted forest green (cool-leaning, darker than mint so
+                   it doesn't read pastel) + warm terracotta — an
+                   earthy, natural pairing
+       --danger stays red-ish in every theme since destructive actions
+       reading as red is a convention worth keeping regardless of accent.
+       --accent-rgb/--accent2-rgb exist so rgba() tints (tag chips, hover
+       washes, glows) can follow the active theme too — CSS custom
+       properties can't be interpolated inside a hex literal, only passed
+       as full values, so anywhere the app needs "accent color at 12%
+       opacity" it must build that from R,G,B channels instead.
+       Each theme is defined once here for dark mode and again below
+       inside 'body.light' for the light variant, same pattern light/dark
+       itself already uses. Set via setAccentTheme() in app.js, persisted
+       as settings.accentTheme. */
+    body.theme-plum {
+      --accent: #a260be;
+      --accent-rgb: 162, 96, 190;
+      --accent-hover: #ae76c7;
+      --accent2: #ddac4b;
+      --accent2-rgb: 221, 172, 75;
+    }
+
+    body.theme-forest {
+      --accent: #3f8d69;
+      --accent-rgb: 63, 141, 105;
+      --accent-hover: #52a17c;
+      --accent2: #d67e51;
+      --accent2-rgb: 214, 126, 81;
     }
 
 
@@ -37,13 +86,36 @@
       /* Cool gray borders */
       --accent: #b83347;
       /* Darker rose-red for readability */
+      --accent-rgb: 184, 51, 71;
+      --accent-hover: #c83a50;
       --accent2: #1a9e88;
       /* Darker teal for readability */
+      --accent2-rgb: 26, 158, 136;
       --text: #333B3C;
       /* Primary text — dark but warm, kept for readability */
       --muted: #9394A5;
       /* Secondary text */
       --danger: #c83030;
+      --danger-rgb: 200, 48, 48;
+    }
+
+    /* Same accent swap as the dark versions above, darkened/adjusted for
+       contrast against light's white surfaces — mirrors how light mode's
+       own --accent/--accent2 above are darker than dark mode's. */
+    body.light.theme-plum {
+      --accent: #80389f;
+      --accent-rgb: 128, 56, 159;
+      --accent-hover: #8f4bab;
+      --accent2: #bd8c28;
+      --accent2-rgb: 189, 140, 40;
+    }
+
+    body.light.theme-forest {
+      --accent: #2c6d4f;
+      --accent-rgb: 44, 109, 79;
+      --accent-hover: #3e8362;
+      --accent2: #b85c2e;
+      --accent2-rgb: 184, 92, 46;
     }
 
     body.light {
@@ -172,7 +244,7 @@
     }
 
     body.light .overall-item:hover {
-      background: rgba(184, 51, 71, .05);
+      background: rgba(var(--accent-rgb), .05);
     }
 
     body.light #stats-bar {
@@ -185,8 +257,8 @@
     }
 
     body.light #compare-bar {
-      background: rgba(26, 158, 136, .07);
-      border-color: rgba(26, 158, 136, .22);
+      background: rgba(var(--accent2-rgb), .07);
+      border-color: rgba(var(--accent2-rgb), .22);
     }
 
     body.light #panel {
@@ -296,17 +368,6 @@
     body.light #bulk-modal {
       background: var(--surface);
       border-color: var(--border);
-    }
-
-    body.light .tag-chip {
-      background: rgba(79, 82, 217, .08);
-      border-color: rgba(79, 82, 217, .25);
-      color: var(--accent);
-    }
-
-    body.light .tag-chip.active {
-      background: var(--accent);
-      color: #fff;
     }
 
     body.light #viewer-overlay {
@@ -533,8 +594,8 @@
       align-items: center;
       gap: 14px;
       padding: 8px 28px;
-      background: rgba(74, 232, 201, .1);
-      border-bottom: 1px solid rgba(74, 232, 201, .3);
+      background: rgba(var(--accent2-rgb), .1);
+      border-bottom: 1px solid rgba(var(--accent2-rgb), .3);
       font-family: 'Barlow', sans-serif;
       font-size: .82rem;
     }
@@ -551,7 +612,7 @@
       letter-spacing: .03em;
       color: var(--accent2);
       text-decoration: none;
-      border-bottom: 1px solid rgba(74, 232, 201, .4);
+      border-bottom: 1px solid rgba(var(--accent2-rgb), .4);
     }
 
     #update-banner-link:hover {
@@ -581,7 +642,7 @@
     }
 
     body.light #update-banner {
-      background: rgba(74, 232, 201, .12);
+      background: rgba(var(--accent2-rgb), .12);
     }
 
     .header-brand {
@@ -596,7 +657,7 @@
       font-size: 1.5rem;
       letter-spacing: .06em;
       line-height: 1;
-      background: linear-gradient(110deg, #d94f5c 0%, #f2f2f2 100%);
+      background: linear-gradient(110deg, var(--accent) 0%, #f2f2f2 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -617,9 +678,9 @@
       font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
-      color: #4ae8c9;
-      background: rgba(74, 232, 201, .12);
-      border: 1px solid rgba(74, 232, 201, .3);
+      color: var(--accent2);
+      background: rgba(var(--accent2-rgb), .12);
+      border: 1px solid rgba(var(--accent2-rgb), .3);
       border-radius: 3px;
       padding: 1px 7px;
       width: fit-content;
@@ -753,13 +814,13 @@
 
     .btn.primary {
       background: var(--accent);
-      color: #000;
+      color: #fff;
       border-color: var(--accent);
     }
 
     .btn.primary:hover {
-      background: #f5d75a;
-      border-color: #f5d75a;
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
     }
 
     .btn.accent2 {
@@ -827,9 +888,9 @@
       align-items: center;
       gap: 10px;
       padding: 7px 28px;
-      background: rgba(74, 232, 201, .06);
-      border-top: 1px solid rgba(74, 232, 201, .15);
-      border-bottom: 1px solid rgba(74, 232, 201, .15);
+      background: rgba(var(--accent2-rgb), .06);
+      border-top: 1px solid rgba(var(--accent2-rgb), .15);
+      border-bottom: 1px solid rgba(var(--accent2-rgb), .15);
     }
 
     #compare-bar.visible {
@@ -972,7 +1033,7 @@
     .card.bulk-selected,
     .lrow.bulk-selected {
       border-color: var(--accent2);
-      box-shadow: 0 0 0 2px rgba(74, 232, 201, .25);
+      box-shadow: 0 0 0 2px rgba(var(--accent2-rgb), .25);
     }
 
     /* Hide the per-card action row while selecting for bulk edit, so a
@@ -1237,7 +1298,7 @@
     }
 
     .share-format-btn:hover {
-      background: rgba(217, 79, 92, .08);
+      background: rgba(var(--accent-rgb), .08);
       color: var(--accent);
     }
 
@@ -1250,7 +1311,7 @@
     }
 
     body.light .share-format-btn:hover {
-      background: rgba(184, 51, 71, .06);
+      background: rgba(var(--accent-rgb), .06);
     }
 
     #overall-list {
@@ -1271,7 +1332,7 @@
     }
 
     .overall-item:hover {
-      background: rgba(232, 201, 74, .06);
+      background: rgba(var(--accent2-rgb), .06);
     }
 
     .overall-item:last-child {
@@ -1480,7 +1541,7 @@
     }
 
     .card-action-btn.edit:hover {
-      background: rgba(232, 201, 74, .2);
+      background: rgba(var(--accent-rgb), .2);
     }
 
     .card-action-btn.del {
@@ -1488,7 +1549,7 @@
     }
 
     .card-action-btn.del:hover {
-      background: rgba(232, 74, 74, .2);
+      background: rgba(var(--danger-rgb), .2);
     }
 
     /* ── ADD CARD ── */
@@ -1595,7 +1656,7 @@
     #panel-bio a {
       color: var(--accent2);
       text-decoration: none;
-      border-bottom: 1px solid rgba(74, 232, 201, .3);
+      border-bottom: 1px solid rgba(var(--accent2-rgb), .3);
       transition: border-color .15s;
     }
 
@@ -2076,6 +2137,51 @@
       color: var(--accent2);
     }
 
+    /* ── ACCENT COLOR SWATCH PICKER ──
+       A row of small circular swatches (one per theme-* class) in the
+       Appearance section. Each swatch shows that theme's own --accent
+       color via an inline style (set in JS/HTML, not CSS, since it needs
+       to show the color regardless of which theme is currently active).
+       The active swatch gets a ring in the CURRENT --accent so it reads
+       as "selected" using whichever palette is live right now. */
+    .accent-swatch-group {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .accent-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      padding: 0;
+      position: relative;
+      transition: border-color .15s, transform .15s;
+    }
+
+    .accent-swatch:hover {
+      transform: scale(1.1);
+    }
+
+    .accent-swatch.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+    }
+
+    .accent-swatch.active::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--surface);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, .15);
+    }
+
     .settings-section.danger .settings-section-title {
       color: var(--danger);
     }
@@ -2137,7 +2243,7 @@
       letter-spacing: .03em;
       color: var(--accent2);
       text-decoration: none;
-      border-bottom: 1px solid rgba(74, 232, 201, .3);
+      border-bottom: 1px solid rgba(var(--accent2-rgb), .3);
       transition: border-color .15s;
     }
 
@@ -2307,8 +2413,8 @@
       letter-spacing: .06em;
       text-transform: uppercase;
       color: var(--accent2);
-      border: 1px solid rgba(74, 232, 201, .35);
-      background: rgba(74, 232, 201, .08);
+      border: 1px solid rgba(var(--accent2-rgb), .35);
+      background: rgba(var(--accent2-rgb), .08);
       padding: 2px 6px;
       border-radius: 2px;
       margin-left: 8px;
@@ -2471,8 +2577,8 @@
       letter-spacing: .06em;
       text-transform: uppercase;
       color: var(--accent2);
-      border: 1px solid rgba(74, 232, 201, .35);
-      background: rgba(74, 232, 201, .08);
+      border: 1px solid rgba(var(--accent2-rgb), .35);
+      background: rgba(var(--accent2-rgb), .08);
       padding: 1px 6px;
       border-radius: 2px;
       margin-left: 8px;
@@ -2649,7 +2755,7 @@
     }
 
     .switcher-item.selected {
-      background: rgba(217, 79, 92, .12);
+      background: rgba(var(--accent-rgb), .12);
     }
 
     .switcher-item-name {
@@ -2670,8 +2776,8 @@
       letter-spacing: .06em;
       text-transform: uppercase;
       color: var(--accent2);
-      border: 1px solid rgba(74, 232, 201, .35);
-      background: rgba(74, 232, 201, .08);
+      border: 1px solid rgba(var(--accent2-rgb), .35);
+      background: rgba(var(--accent2-rgb), .08);
       padding: 1px 6px;
       border-radius: 2px;
       flex-shrink: 0;
@@ -2713,7 +2819,7 @@
     }
 
     body.light .switcher-item.selected {
-      background: rgba(184, 51, 71, .08);
+      background: rgba(var(--accent-rgb), .08);
     }
 
     body.light #switcher-hint kbd {
@@ -3227,12 +3333,16 @@
       text-transform: uppercase;
       padding: 2px 7px;
       border-radius: 2px;
-      background: rgba(232, 201, 74, .12);
-      border: 1px solid rgba(232, 201, 74, .25);
-      color: var(--accent);
+      /* Soft, theme-aware tint — low-opacity accent wash rather than a
+         solid or high-contrast fill, so a row of tags reads as quiet
+         metadata rather than competing with buttons/badges for attention. */
+      background: rgba(var(--accent-rgb), .1);
+      border: 1px solid rgba(var(--accent-rgb), .18);
+      color: color-mix(in srgb, var(--accent) 75%, var(--muted));
       cursor: default;
       white-space: nowrap;
       margin: 0;
+      transition: background .15s, border-color .15s;
     }
 
     button.tag-chip {
@@ -3245,12 +3355,13 @@
     }
 
     .tag-chip.interactive:hover {
-      background: rgba(232, 201, 74, .22);
+      background: rgba(var(--accent-rgb), .18);
+      border-color: rgba(var(--accent-rgb), .32);
     }
 
     .tag-chip.active {
       background: var(--accent);
-      color: #000;
+      color: #fff;
       border-color: var(--accent);
     }
 
@@ -3504,10 +3615,10 @@
       letter-spacing: .07em;
       text-transform: uppercase;
       color: var(--accent2);
-      border: 1px solid rgba(74, 232, 201, .35);
+      border: 1px solid rgba(var(--accent2-rgb), .35);
       padding: 5px 10px;
       border-radius: 3px;
-      background: rgba(74, 232, 201, .08);
+      background: rgba(var(--accent2-rgb), .08);
       flex-shrink: 0;
       white-space: nowrap;
     }
@@ -3523,8 +3634,8 @@
     }
 
     body.incognito header {
-      border-bottom-color: rgba(74, 232, 201, .3);
-      box-shadow: 0 1px 0 rgba(74, 232, 201, .15);
+      border-bottom-color: rgba(var(--accent2-rgb), .3);
+      box-shadow: 0 1px 0 rgba(var(--accent2-rgb), .15);
     }
 
     body.incognito #site-footer::before {
@@ -3533,8 +3644,8 @@
 
     body.light #incognito-badge {
       color: var(--accent2);
-      border-color: rgba(26, 158, 136, .35);
-      background: rgba(26, 158, 136, .08);
+      border-color: rgba(var(--accent2-rgb), .35);
+      background: rgba(var(--accent2-rgb), .08);
     }
 
 
@@ -3768,11 +3879,11 @@
 
     .tpl-btn.load {
       color: var(--accent2);
-      border: 1px solid rgba(74, 232, 201, .3);
+      border: 1px solid rgba(var(--accent2-rgb), .3);
     }
 
     .tpl-btn.load:hover {
-      background: rgba(74, 232, 201, .12);
+      background: rgba(var(--accent2-rgb), .12);
     }
 
     .tpl-btn.del {
@@ -3891,30 +4002,6 @@
 
     /* ── PERSONAL TOUCHES ── */
 
-    /* Card score fill — matches stat gradient */
-    .card-score-fill {
-      background: linear-gradient(90deg, var(--accent), #e87585);
-    }
-
-    /* Primary button — subtle gradient */
-    .btn.primary {
-      background: linear-gradient(135deg, #d94f5c 0%, #bf3f4e 100%);
-      border-color: #d94f5c;
-    }
-
-    .btn.primary:hover {
-      background: linear-gradient(135deg, #e05f6c 0%, #c84f5e 100%);
-      border-color: #e05f6c;
-    }
-
-    body.light .btn.primary {
-      background: linear-gradient(135deg, #b83347 0%, #982838 100%);
-    }
-
-    body.light .btn.primary:hover {
-      background: linear-gradient(135deg, #c83a50 0%, #a82f40 100%);
-    }
-
     /* Card hover — subtle accent glow on top edge */
     .card {
       box-shadow: 0 0 0 0 transparent;
@@ -3922,14 +4009,14 @@
 
     .card:hover {
       border-color: var(--accent);
-      box-shadow: 0 -2px 0 0 var(--accent), 0 4px 16px rgba(217, 79, 92, .1);
+      box-shadow: 0 -2px 0 0 var(--accent), 0 4px 16px rgba(var(--accent-rgb), .1);
       transform: translateY(-2px);
     }
 
     /* Compare winner bar — glow */
     .cmp-stat-fill.winner {
       background: var(--accent2);
-      box-shadow: 0 0 6px rgba(74, 232, 201, .4);
+      box-shadow: 0 0 6px rgba(var(--accent2-rgb), .4);
     }
 
     .cmp-winner-badge {
@@ -3953,32 +4040,13 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(217, 79, 92, .25), transparent);
+      background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), .25), transparent);
       pointer-events: none;
-    }
-
-    /* Tag chips — slightly refined */
-    .tag-chip {
-      background: rgba(217, 79, 92, .1);
-      border: 1px solid rgba(217, 79, 92, .22);
-      color: var(--accent);
-      transition: background .15s, border-color .15s;
-    }
-
-    .tag-chip.interactive:hover {
-      background: rgba(217, 79, 92, .2);
-      border-color: rgba(217, 79, 92, .4);
-    }
-
-    .tag-chip.active {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
     }
 
     /* List view overall score — use gradient text */
     .lrow-overall {
-      background: linear-gradient(135deg, #ffd700, #d94f5c);
+      background: linear-gradient(135deg, var(--rank1), var(--accent));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -4236,7 +4304,7 @@
     }
 
     .card-action-btn.pin:hover {
-      background: rgba(74, 232, 201, .15);
+      background: rgba(var(--accent2-rgb), .15);
     }
 
     .card-action-btn.pin.active {
@@ -4487,11 +4555,11 @@
     /* ── SHARE BUTTON ── */
     #panel-share-btn {
       color: var(--accent2);
-      border-color: rgba(74, 232, 201, .35);
+      border-color: rgba(var(--accent2-rgb), .35);
     }
 
     #panel-share-btn:hover {
-      background: rgba(74, 232, 201, .1);
+      background: rgba(var(--accent2-rgb), .1);
     }
 
     /* ── HAMBURGER BUTTON ── */
@@ -4514,7 +4582,7 @@
 
     #hamburger-btn:hover {
       border-color: var(--accent);
-      background: rgba(217, 79, 92, .06);
+      background: rgba(var(--accent-rgb), .06);
     }
 
     #hamburger-btn span {
@@ -4536,7 +4604,7 @@
 
     body.light #hamburger-btn:hover {
       border-color: var(--accent);
-      background: rgba(184, 51, 71, .05);
+      background: rgba(var(--accent-rgb), .05);
     }
 
     /* ── HAMBURGER DRAWER ── */
@@ -4654,7 +4722,7 @@
     }
 
     .ham-btn:hover {
-      background: rgba(217, 79, 92, .07);
+      background: rgba(var(--accent-rgb), .07);
       color: var(--accent);
     }
 
@@ -4678,7 +4746,7 @@
     }
 
     .ham-btn.accent2:hover {
-      background: rgba(74, 232, 201, .07);
+      background: rgba(var(--accent2-rgb), .07);
       color: var(--accent2);
     }
 
@@ -4687,7 +4755,7 @@
     }
 
     .ham-btn.primary:hover {
-      background: rgba(217, 79, 92, .1);
+      background: rgba(var(--accent-rgb), .1);
     }
 
     /* incognito toggle row inside drawer */
@@ -4753,7 +4821,7 @@
     }
 
     .ham-switch.on {
-      background: rgba(74, 232, 201, .35);
+      background: rgba(var(--accent2-rgb), .35);
     }
 
     .ham-switch.on .ham-switch-knob {
@@ -4793,11 +4861,11 @@
     }
 
     body.light .ham-btn:hover {
-      background: rgba(184, 51, 71, .05);
+      background: rgba(var(--accent-rgb), .05);
     }
 
     body.light .ham-btn.accent2:hover {
-      background: rgba(26, 158, 136, .06);
+      background: rgba(var(--accent2-rgb), .06);
     }
 
     .ham-export-wrap {
@@ -4858,7 +4926,7 @@
     }
 
     .ham-sub-btn:hover {
-      background: rgba(217, 79, 92, .07);
+      background: rgba(var(--accent-rgb), .07);
       color: var(--accent);
     }
 
@@ -4867,7 +4935,7 @@
     }
 
     body.light .ham-sub-btn:hover {
-      background: rgba(184, 51, 71, .05);
+      background: rgba(var(--accent-rgb), .05);
     }
 
     /* ── TOOLBAR UTILITY BUTTONS (view / filter / insights) ── */
@@ -4902,7 +4970,7 @@
 
     .toolbar-util-btn.active {
       border-color: var(--accent2);
-      background: rgba(74, 232, 201, .08);
+      background: rgba(var(--accent2-rgb), .08);
     }
 
     .toolbar-util-btn .util-btn-label {
@@ -4924,7 +4992,7 @@
 
     body.light .toolbar-util-btn.active {
       border-color: var(--accent2);
-      background: rgba(26, 158, 136, .07);
+      background: rgba(var(--accent2-rgb), .07);
     }
 
     /* ── INSIGHTS PANEL (collapsible) ── */

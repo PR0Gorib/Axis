@@ -319,6 +319,17 @@
             </div>
             <button id="settings-theme-btn" class="settings-toggle-btn" onclick="toggleTheme()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> Dark</button>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Accent Color</div>
+              <div class="settings-row-desc">Pick the highlight color used throughout the app.</div>
+            </div>
+            <div class="accent-swatch-group" id="accent-swatch-group" role="radiogroup" aria-label="Accent color">
+              <button class="accent-swatch" id="accent-swatch-red" style="background:#d94f5c" onclick="setAccentTheme('red')" role="radio" aria-label="Red accent"></button>
+              <button class="accent-swatch" id="accent-swatch-plum" style="background:#a260be" onclick="setAccentTheme('plum')" role="radio" aria-label="Plum accent"></button>
+              <button class="accent-swatch" id="accent-swatch-forest" style="background:#3f8d69" onclick="setAccentTheme('forest')" role="radio" aria-label="Forest accent"></button>
+            </div>
+          </div>
         </div>
 
         <div class="settings-section">

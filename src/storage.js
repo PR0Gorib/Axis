@@ -429,13 +429,14 @@ const AxisStorage = (() => {
    * statMax here is the LEGACY global value only — see saveSettings() above.
    */
   async function loadSettings() {
-    const defaults = { theme: 'dark', statMax: 10, viewMode: 'grid' };
+    const defaults = { theme: 'dark', statMax: 10, viewMode: 'grid', accentTheme: 'red' };
     if (!isTauri()) {
       try {
         return {
-          theme:    localStorage.getItem('axis_theme')   || defaults.theme,
-          statMax:  parseInt(localStorage.getItem('axis_statmax')) || defaults.statMax,
-          viewMode: localStorage.getItem('axis_view')    || defaults.viewMode,
+          theme:       localStorage.getItem('axis_theme')       || defaults.theme,
+          statMax:     parseInt(localStorage.getItem('axis_statmax')) || defaults.statMax,
+          viewMode:    localStorage.getItem('axis_view')        || defaults.viewMode,
+          accentTheme: localStorage.getItem('axis_accentTheme') || defaults.accentTheme,
         };
       } catch(e) { return defaults; }
     }

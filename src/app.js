@@ -108,6 +108,7 @@
         theme: lightMode ? 'light' : 'dark',
         statMax: statMax,
         viewMode: viewMode,
+        accentTheme: accentTheme,
       };
       AxisStorage.saveSettings({ ...current, ...partial }).catch(() => { });
     }
@@ -1361,8 +1362,20 @@
       });
     }
 
-    // Distinct, theme-consistent colours per compare slot (max 4 items)
-    const CMP_RADAR_COLORS = ['#d94f5c', '#4ae8c9', '#e8c94a', '#8a7fe8'];
+    // Distinct colours per compare slot (max 4 items). Slots 1-2 follow the
+    // live accent theme (read fresh each call, not cached, since the user
+    // can switch themes while Compare is open); slots 3-4 are fixed
+    // tertiary colors — inventing a themed 3rd/4th color for a rarely-used
+    // slot isn't worth the complexity a 3-way accent palette would add.
+    function getCmpRadarColors() {
+      const cs = getComputedStyle(document.body);
+      return [
+        cs.getPropertyValue('--accent').trim() || '#d94f5c',
+        cs.getPropertyValue('--accent2').trim() || '#4ae8c9',
+        '#e8c94a',
+        '#8a7fe8',
+      ];
+    }
 
     // Wrap a category label to fit maxWidth px, using at most 2 lines.
     // Long single words are truncated but never below half their original
@@ -1409,6 +1422,7 @@
       const legend = document.getElementById(opts.legendId || 'cmp-radar-legend');
       const wrap   = document.getElementById(opts.wrapId   || 'cmp-radar-wrap');
       const ink    = _chartInkRGB();
+      const CMP_RADAR_COLORS = getCmpRadarColors();
       legend.innerHTML = '';
 
       if (!categories.length || categories.length < 3) {
@@ -1552,6 +1566,7 @@
       const legend = document.getElementById('cmp-bars-legend');
       const wrap   = document.getElementById('cmp-bars-wrap');
       const ink    = _chartInkRGB();
+      const CMP_RADAR_COLORS = getCmpRadarColors();
       legend.innerHTML = '';
 
       if (!categories.length) {
@@ -1981,6 +1996,10 @@
 
       const viewBtn = document.getElementById('settings-view-btn');
       if (viewBtn) viewBtn.innerHTML = viewMode === 'list' ? `${Icons.list} List` : `${Icons.grid} Grid`;
+
+      document.querySelectorAll('.accent-swatch').forEach(sw => sw.classList.remove('active'));
+      const activeSwatch = document.getElementById(`accent-swatch-${accentTheme}`);
+      if (activeSwatch) activeSwatch.classList.add('active');
     }
 
     async function clearAllItems() {
@@ -3045,6 +3064,24 @@
       _syncSettingsUI();
     }
 
+    // ── ACCENT COLOR ─────────────────────────────────────
+    // Separate from light/dark (which controls background/surface tones):
+    // this picks the --accent/--accent2 pairing layered on top of whichever
+    // mode is active, via 'theme-plum'/'theme-forest' classes on <body>
+    // (see styles.css). 'red' is the original palette and needs no class —
+    // it's just whatever :root/body.light already declare on their own.
+    let accentTheme = 'red';
+    const ACCENT_THEMES = ['red', 'plum', 'forest'];
+
+    function setAccentTheme(theme) {
+      if (!ACCENT_THEMES.includes(theme)) return;
+      accentTheme = theme;
+      ACCENT_THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
+      if (theme !== 'red') document.body.classList.add(`theme-${theme}`);
+      axisSaveSettings({ accentTheme: theme });
+      _syncSettingsUI();
+    }
+
     // ── STAT MAX TOGGLE ────────────────────────────────
     // statMax is per-project, saved as part of this project's data.json via
     // axisSave (same place items/categories live) — not settings.json.
@@ -4089,6 +4126,10 @@
           if (emoji) emoji.innerHTML = Icons.sun;
           if (label) label.textContent = 'Light';
           if (btn) btn.title = 'Switch to dark mode';
+        }
+        if (ACCENT_THEMES.includes(settings.accentTheme)) {
+          accentTheme = settings.accentTheme;
+          if (accentTheme !== 'red') document.body.classList.add(`theme-${accentTheme}`);
         }
         // statMax used to be a single global setting (settings.json). It's
         // now per-project, stored in each project's data.json alongside
