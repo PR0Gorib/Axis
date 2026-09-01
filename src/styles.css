@@ -1053,11 +1053,12 @@
       display: none;
     }
 
-    /* Leave room above the fixed bulk edit bar so the last row of items
-       isn't hidden behind it */
-    body.bulk-edit-mode #grid {
-      padding-bottom: 96px;
-    }
+    /* Bottom padding while bulk edit mode is active is set dynamically in
+       JS (see _syncBulkBarPadding in app.js) rather than a fixed value
+       here — #bulk-edit-bar's real height varies with how many lines its
+       flex-wrap content wraps to, and a static guess falls short on
+       narrower windows, silently letting the bar cover (and steal clicks
+       from) the last row of cards. */
 
     body.light #bulk-edit-bar {
       background: var(--surface);
@@ -1405,7 +1406,7 @@
     .card:hover {
       border-color: var(--accent);
       transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(129, 140, 248, .12);
+      box-shadow: 0 4px 16px rgba(var(--accent-rgb), .12);
     }
 
     .card.selected {
@@ -1848,7 +1849,7 @@
     .field input[type=url]:focus,
     .field textarea:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(129, 140, 248, .12);
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .12);
       outline: none;
     }
 

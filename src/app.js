@@ -822,6 +822,26 @@
     // Separate selection mode from Compare (no 4-item cap) for applying
     // one stat value across many items at once — e.g. after adding a new
     // category to a collection that already has 20 items.
+    let _bulkBarResizeObserver = null;
+
+    // #bulk-edit-bar is fixed to the bottom of the viewport and can wrap
+    // to 2-3 lines on narrower windows (it holds a count, two buttons, a
+    // dropdown, a number input, and two more buttons, all in one flex-wrap
+    // row) — a single guessed padding value can't keep up with that, so
+    // #grid's bottom padding is set to the bar's REAL measured height
+    // instead. Without this, on any window narrow enough for the bar to
+    // wrap, it silently grows taller than the reserved padding and starts
+    // covering the last row of cards — the cards still render fine
+    // underneath, but every click there lands on the bar (z-index above
+    // the grid) instead of the card, which is why clicking a checkbox
+    // could look like it does nothing at all.
+    function _syncBulkBarPadding() {
+      const bar = document.getElementById('bulk-edit-bar');
+      const grid = document.getElementById('grid');
+      if (!bar || !grid) return;
+      grid.style.paddingBottom = bulkEditMode ? `${bar.offsetHeight + 24}px` : '';
+    }
+
     function enterBulkEditMode() {
       if (!categories.length) {
         showToast('Add a category first — bulk edit needs one to apply.', true);
@@ -842,6 +862,16 @@
       renderBulkEditBar();
       render();
       showToast('Bulk edit — click items to select, then choose a category and value.');
+
+      // Measure once now, then keep watching — the bar's height can change
+      // if the window resizes (causing it to wrap differently) or if its
+      // content reflows for any other reason.
+      _syncBulkBarPadding();
+      const bar = document.getElementById('bulk-edit-bar');
+      if (bar && typeof ResizeObserver !== 'undefined') {
+        _bulkBarResizeObserver = new ResizeObserver(_syncBulkBarPadding);
+        _bulkBarResizeObserver.observe(bar);
+      }
     }
 
     function exitBulkEditMode() {
@@ -849,6 +879,11 @@
       bulkEditSet.clear();
       document.body.classList.remove('bulk-edit-mode');
       document.getElementById('bulk-edit-bar').classList.remove('visible');
+      if (_bulkBarResizeObserver) {
+        _bulkBarResizeObserver.disconnect();
+        _bulkBarResizeObserver = null;
+      }
+      _syncBulkBarPadding();
       render();
     }
 
@@ -856,7 +891,16 @@
       if (bulkEditSet.has(id)) bulkEditSet.delete(id);
       else bulkEditSet.add(id);
       renderBulkEditBar();
-      const card = document.querySelector(`[data-id="${id}"]`);
+      // Scoped to #grid specifically — the leaderboard sidebar (#overall-
+      // list) also renders one element per item with the SAME data-id, and
+      // sits earlier in the page than #grid. An unscoped querySelector()
+      // would silently match that leaderboard row instead of the actual
+      // card/row the person clicked, since querySelector always returns
+      // the first match in document order — toggling .bulk-selected there
+      // has no visible effect (that class isn't styled for .overall-item),
+      // so the checkbox looked like it wasn't responding at all, even
+      // though bulkEditSet itself was updating correctly the whole time.
+      const card = document.querySelector(`#grid [data-id="${id}"]`);
       if (card) card.classList.toggle('bulk-selected', bulkEditSet.has(id));
     }
 
