@@ -2150,26 +2150,52 @@
 
     /* ── ACCENT COLOR SWATCH PICKER ──
        A row of small circular swatches (one per theme-* class) in the
-       Appearance section. Each swatch shows that theme's own --accent
-       color via an inline style (set in JS/HTML, not CSS, since it needs
-       to show the color regardless of which theme is currently active).
+       Appearance section. Each swatch is a conic-gradient split showing
+       BOTH of that theme's colors at once — primary at 65%, secondary at
+       35%, divided by a thin seam along the diagonal — rather than a flat
+       single-color dot, so picking a theme previews its actual pairing
+       (e.g. Red/Teal) instead of just its primary hue. Colors are set via
+       two CSS custom properties per swatch (--sw-primary/--sw-secondary,
+       inline in HTML) since they need to show each theme's own colors
+       regardless of which theme is currently active — plain var(--accent)
+       would only ever show the live theme, not the other options.
        The active swatch gets a ring in the CURRENT --accent so it reads
        as "selected" using whichever palette is live right now. */
     .accent-swatch-group {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       flex-shrink: 0;
     }
 
     .accent-swatch {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
-      border: 2px solid var(--border);
+      border: none;
       cursor: pointer;
       padding: 0;
       position: relative;
-      transition: border-color .15s, transform .15s;
+      transition: transform .15s;
+      /* 65/35 diagonal split with a crisp seam: a single continuous
+         conic-gradient where the primary color's stop and the secondary
+         color's stop sit at the SAME angle (234deg) creates a hard edge
+         with no transparent gap between them — two disjoint stop ranges
+         (e.g. "0-233deg" then "235-360deg") would leave the 233-235deg
+         sliver undefined and render see-through, which is why this uses
+         one gradient with a shared boundary instead. Rotated -18deg so
+         the seam sits on a diagonal rather than straight up, reading as a
+         deliberate two-tone badge rather than an awkward vertical slice.
+         A second, thin conic-gradient layered on top draws the seam line
+         itself — the hard color stop alone reads as "two colors touching"
+         from a distance; a visible dividing line is what actually reads
+         as a deliberate split rather than a mis-rendered gradient. */
+      background:
+        conic-gradient(from -18deg,
+          transparent 232.5deg, rgba(0, 0, 0, .35) 234deg, transparent 235.5deg),
+        conic-gradient(from -18deg,
+          var(--sw-primary) 0deg 234deg,
+          var(--sw-secondary) 234deg 360deg);
+      box-shadow: inset 0 0 0 2px var(--border);
     }
 
     .accent-swatch:hover {
@@ -2177,8 +2203,7 @@
     }
 
     .accent-swatch.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+      box-shadow: inset 0 0 0 2px var(--surface), 0 0 0 2px var(--accent);
     }
 
     .accent-swatch.active::after {
@@ -2186,8 +2211,8 @@
       position: absolute;
       inset: 0;
       margin: auto;
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: var(--surface);
       box-shadow: 0 0 0 1px rgba(0, 0, 0, .15);

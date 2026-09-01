@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.7.1';
+    const APP_VERSION = '1.8.0';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
