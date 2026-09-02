@@ -6,7 +6,7 @@
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational)](https://github.com/PR0Gorib/Axis/releases)
 
-![Main View](assets/Axis-main.png)
+![Main View](assets/Axis-main.gif)
 
 Axis is an open-source desktop application built with HTML, CSS, JavaScript, and Tauri that lets you compare, rank, and organize virtually anything.
 
@@ -71,7 +71,9 @@ Grab the latest build for your platform from the **[Releases page](https://githu
 - Automatic backups & restore manager
 - Favorites / pinned items
 - Keyboard shortcuts
-- Dark & Light themes with smooth transitions, and animated re-ranking when you sort or filter
+- Dark & Light themes, with a choice of accent color pairings (Red/Teal, Plum/Amber, Forest/Terracotta)
+- Smooth animated transitions — re-ranking when you sort or filter, and a crossfade when switching between grid and list view
+- Per-project stat scale — each project remembers its own 0–10 or 0–100 setting
 - In-app update checker — notifies you when a newer release is available on GitHub
 - Incognito mode for temporary, unsaved sessions
 - Native desktop app via Tauri
