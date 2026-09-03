@@ -4117,6 +4117,20 @@
         }
       }
 
+      // Up/Down zoom — fullscreen viewer only (zooming the small panel
+      // thumbnail isn't useful the way paging through it is, so this
+      // doesn't extend to panelOpenForNav the way arrow-key nav above
+      // does). Same step size as a single scroll-wheel tick, so keyboard
+      // and mouse zoom feel consistent with each other.
+      if (!_isTypingContext() && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        const viewerOpenForZoom = document.getElementById('viewer-overlay').classList.contains('open');
+        if (viewerOpenForZoom) {
+          e.preventDefault();
+          viewerZoom(e.key === 'ArrowUp' ? 0.15 : -0.15);
+        }
+      }
+
       // Power-user shortcuts — skip while typing, while bulk editing, or
       // while any modal/overlay is open
       if (_isTypingContext() || _anyOverlayOpen() || bulkEditMode) return;
