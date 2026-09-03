@@ -71,9 +71,9 @@ Grab the latest build for your platform from the **[Releases page](https://githu
 - Automatic backups & restore manager
 - Favorites / pinned items
 - Keyboard shortcuts
-- Dark & Light themes, with a choice of accent color pairings (Red/Teal, Plum/Amber, Forest/Terracotta)
-- Smooth animated transitions — re-ranking when you sort or filter, and a crossfade when switching between grid and list view
-- Per-project stat scale — each project remembers its own 0–10 or 0–100 setting
+- Dark & Light themes, three accent color pairings (Red/Teal, Plum/Amber, Forest/Terracotta) with a full UI-wide color overhaul per theme
+- Smooth transitions throughout — animated re-ranking when you sort or filter, and a crossfade when switching between grid and list view
+- Per-project stat scale — each project remembers its own 0–10 or 0–100 scoring range
 - In-app update checker — notifies you when a newer release is available on GitHub
 - Incognito mode for temporary, unsaved sessions
 - Native desktop app via Tauri
