@@ -301,6 +301,39 @@
     </div>
   </div>
 
+  <!-- KEYBOARD SHORTCUTS MODAL -->
+  <div id="shortcuts-modal-overlay">
+    <div id="shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-modal-title">
+      <div id="shortcuts-modal-header">
+        <h2 id="shortcuts-modal-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M10 14h4"/></svg> Keyboard Shortcuts</h2>
+        <button class="btn small" onclick="closeShortcutsModal()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div id="shortcuts-list">
+        <div class="shortcuts-group">
+          <div class="shortcuts-group-title">General</div>
+          <div class="shortcut-row"><span class="shortcut-desc">Add a new item</span><span class="shortcut-keys"><kbd>N</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Jump to search</span><span class="shortcut-keys"><kbd class="ham-shortcut-hint">⌘F</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Switch project</span><span class="shortcut-keys"><kbd class="ham-shortcut-hint">⌘K</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Close a panel, modal, or dialog</span><span class="shortcut-keys"><kbd>Esc</kbd></span></div>
+        </div>
+        <div class="shortcuts-group">
+          <div class="shortcuts-group-title">Item Panel</div>
+          <div class="shortcut-row"><span class="shortcut-desc">Edit the open item</span><span class="shortcut-keys"><kbd>E</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Delete the open item</span><span class="shortcut-keys"><kbd>Delete</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Navigate between images</span><span class="shortcut-keys"><kbd>←</kbd><kbd>→</kbd></span></div>
+        </div>
+        <div class="shortcuts-group">
+          <div class="shortcuts-group-title">Fullscreen Image Viewer</div>
+          <div class="shortcut-row"><span class="shortcut-desc">Navigate between images</span><span class="shortcut-keys"><kbd>←</kbd><kbd>→</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Zoom in / out</span><span class="shortcut-keys"><kbd>↑</kbd><kbd>↓</kbd></span></div>
+        </div>
+      </div>
+      <div id="shortcuts-modal-hint">
+        Shortcuts are disabled while typing in a field, and most are scoped to whatever's currently open — e.g. <kbd>E</kbd> only works while an item's panel is open.
+      </div>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
   <div id="settings-modal-overlay">
     <div id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
@@ -351,6 +384,17 @@
               <div class="settings-row-desc">Show items as a grid of cards or a compact list.</div>
             </div>
             <button id="settings-view-btn" class="settings-toggle-btn" onclick="toggleView(); _syncSettingsUI();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Grid</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Help</div>
+          <div class="settings-row">
+            <div class="settings-row-label">
+              <div class="settings-row-name">Keyboard Shortcuts</div>
+              <div class="settings-row-desc">See every shortcut Axis supports, grouped by where it applies.</div>
+            </div>
+            <button class="settings-toggle-btn" onclick="openShortcutsModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M10 14h4"/></svg> View</button>
           </div>
         </div>
 

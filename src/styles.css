@@ -2333,6 +2333,157 @@
     }
 
     /* ── BACKUP RESTORE MODAL ── */
+    /* ── KEYBOARD SHORTCUTS MODAL ──
+       Same structural skeleton as the Backup/Categories/Settings modals
+       (overlay → sticky header → scrollable body → optional footer hint),
+       just with its own content: shortcuts grouped by where they apply. */
+    #shortcuts-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      /* Opened from the Settings row (see index.html), so it needs to sit
+         ABOVE #settings-modal-overlay (z-index 200) rather than at the
+         same level — same reasoning as #radar-zoom-overlay (350) sitting
+         above #cmp-overlay (300) when opened from within Compare. */
+      z-index: 220;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #shortcuts-modal-overlay.open {
+      display: flex;
+    }
+
+    #shortcuts-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 82vh;
+      overflow-y: auto;
+    }
+
+    #shortcuts-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 2;
+    }
+
+    #shortcuts-modal-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #shortcuts-modal-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    #shortcuts-list {
+      padding: 6px 20px 4px;
+    }
+
+    .shortcuts-group+.shortcuts-group {
+      margin-top: 14px;
+    }
+
+    .shortcuts-group-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .68rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      padding: 10px 0 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 0;
+    }
+
+    .shortcut-row+.shortcut-row {
+      border-top: 1px solid var(--border);
+    }
+
+    .shortcut-desc {
+      font-family: 'Barlow', sans-serif;
+      font-size: .84rem;
+      color: var(--text);
+    }
+
+    .shortcut-keys {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .shortcut-keys kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .74rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+    }
+
+    #shortcuts-modal-hint {
+      padding: 12px 20px 16px;
+      font-family: 'Barlow', sans-serif;
+      font-size: .74rem;
+      line-height: 1.5;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    #shortcuts-modal-hint kbd {
+      display: inline-block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: .7rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 4px;
+    }
+
+    body.light #shortcuts-modal {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    body.light .shortcut-keys kbd,
+    body.light #shortcuts-modal-hint kbd {
+      background: var(--bg);
+    }
+
     #backup-modal-overlay {
       position: fixed;
       inset: 0;

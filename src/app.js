@@ -2004,6 +2004,18 @@
 
     // ── CATEGORIES MODAL ───────────────────────────────
     // ── BACKUP RESTORE ──────────────────────────────────
+    // ── KEYBOARD SHORTCUTS ─────────────────────────────────
+    // Content is static markup in index.html — no render step needed,
+    // unlike Backups/Categories/Projects which populate from live data.
+    function openShortcutsModal() {
+      document.getElementById('shortcuts-modal-overlay').classList.add('open');
+      trapFocus(document.getElementById('shortcuts-modal'));
+    }
+    function closeShortcutsModal() {
+      document.getElementById('shortcuts-modal-overlay').classList.remove('open');
+      releaseFocus(document.getElementById('shortcuts-modal'));
+    }
+
     async function openBackupModal() {
       const overlay = document.getElementById('backup-modal-overlay');
       overlay.classList.add('open');
@@ -4058,7 +4070,7 @@
         'modal-overlay', 'cat-modal-overlay', 'backup-modal-overlay',
         'settings-modal-overlay', 'projects-modal-overlay', 'cmp-overlay',
         'bulk-overlay', 'viewer-overlay', 'ham-drawer', 'radar-zoom-overlay',
-        'switcher-overlay',
+        'switcher-overlay', 'shortcuts-modal-overlay',
       ];
       return ids.some(id => document.getElementById(id)?.classList.contains('open'));
     }
@@ -4067,6 +4079,15 @@
       if (e.key === 'Escape') {
         if (document.getElementById('radar-zoom-overlay')?.classList.contains('open')) {
           closeRadarZoom();
+          return;
+        }
+        // Shortcuts modal is opened from within Settings and sits on top of
+        // it (see the z-index note in styles.css) — same one-layer-at-a-
+        // time close as radar zoom above, so Escape backs out of Shortcuts
+        // first and leaves Settings open underneath, rather than closing
+        // both at once via the flat batch below.
+        if (document.getElementById('shortcuts-modal-overlay')?.classList.contains('open')) {
+          closeShortcutsModal();
           return;
         }
         if (document.getElementById('switcher-overlay')?.classList.contains('open')) {
