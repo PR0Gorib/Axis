@@ -2546,6 +2546,140 @@
       if (msg) showToast(msg);
     }
     function importData() { document.getElementById('import-input').click(); }
+    // ── IMPORT DUPLICATE RESOLUTION ─────────────────────
+    // Shows the merge/skip/keep-both choice for name-colliding items during
+    // import, plus (only when merging) the stat-conflict strategy. Returns
+    // a Promise resolving to { action: 'merge'|'skip'|'both', strategy:
+    // 'keep'|'incoming' } once the person picks, or null if they cancel the
+    // whole import outright.
+    function showDupeResolutionDialog(nameCollisions, incomingCount) {
+      return new Promise(resolve => {
+        const overlay  = document.getElementById('dupe-modal-overlay');
+        const summary  = document.getElementById('dupe-modal-summary');
+        const namesEl  = document.getElementById('dupe-modal-names');
+        const strategyBox = document.getElementById('dupe-merge-strategy');
+
+        summary.textContent = `${nameCollisions.length} of ${incomingCount} incoming item${incomingCount === 1 ? '' : 's'} share${nameCollisions.length === 1 ? 's' : ''} a name with something you already have.`;
+        const sample = nameCollisions.slice(0, 6).map(c => c.name).join(', ');
+        const more = nameCollisions.length > 6 ? ` and ${nameCollisions.length - 6} more` : '';
+        namesEl.textContent = sample + more;
+
+        // Reset to defaults each time the dialog opens, rather than
+        // remembering the last import's choice — a merge decision made for
+        // one file shouldn't silently carry over and surprise someone on
+        // an unrelated import later in the session.
+        overlay.querySelector('input[name="dupe-action"][value="merge"]').checked = true;
+        overlay.querySelector('input[name="dupe-strategy"][value="keep"]').checked = true;
+        strategyBox.classList.add('visible');
+
+        const actionInputs = overlay.querySelectorAll('input[name="dupe-action"]');
+        const strategyInputs = overlay.querySelectorAll('input[name="dupe-strategy"]');
+        // Keeps each radio group's selected-card highlight in sync via a
+        // plain class toggle, as a fallback for WebView runtimes that don't
+        // support the ':has(input:checked)' CSS selector already handling
+        // this visually on modern browsers (see styles.css).
+        const syncChecked = inputs => inputs.forEach(el =>
+          el.closest('.dupe-option').classList.toggle('checked', el.checked));
+        syncChecked(actionInputs);
+        syncChecked(strategyInputs);
+
+        const onActionChange = () => {
+          const action = overlay.querySelector('input[name="dupe-action"]:checked').value;
+          strategyBox.classList.toggle('visible', action === 'merge');
+          syncChecked(actionInputs);
+        };
+        actionInputs.forEach(el => el.addEventListener('change', onActionChange));
+        const onStrategyChange = () => syncChecked(strategyInputs);
+        strategyInputs.forEach(el => el.addEventListener('change', onStrategyChange));
+
+        const confirmBtn = document.getElementById('dupe-confirm-btn');
+        const cancelBtn  = document.getElementById('dupe-cancel-btn');
+
+        const cleanup = () => {
+          actionInputs.forEach(el => el.removeEventListener('change', onActionChange));
+          strategyInputs.forEach(el => el.removeEventListener('change', onStrategyChange));
+          confirmBtn.onclick = null;
+          cancelBtn.onclick = null;
+          overlay.classList.remove('open');
+          releaseFocus(document.getElementById('dupe-modal'));
+        };
+
+        confirmBtn.onclick = () => {
+          const action = overlay.querySelector('input[name="dupe-action"]:checked').value;
+          const strategy = overlay.querySelector('input[name="dupe-strategy"]:checked').value;
+          cleanup();
+          resolve({ action, strategy });
+        };
+        cancelBtn.onclick = () => {
+          cleanup();
+          resolve(null);
+        };
+
+        overlay.classList.add('open');
+        trapFocus(document.getElementById('dupe-modal'));
+      });
+    }
+
+    // Merges `incoming` into `existing` IN PLACE and returns `existing`.
+    // - stats/statNotes: per-category, 'keep' leaves existing values alone
+    //   and only fills categories existing doesn't have yet; 'incoming'
+    //   overwrites on conflict but still only ADDS categories existing is
+    //   missing rather than removing any existing has that incoming lacks.
+    //   A statNote always travels with whichever value wins for that
+    //   category, since a note describes the reasoning behind that specific
+    //   number — keeping the old note next to a newly-overwritten value
+    //   would misattribute it.
+    // - tags: unioned, case-insensitively deduped, original casing kept
+    //   from whichever item had it first.
+    // - images: existing's non-empty slots are kept in place; incoming's
+    //   images fill any of existing's empty slots, in order, up to the
+    //   fixed 5-slot limit — never dropped silently, but never bumping an
+    //   existing image out either.
+    // - bio: existing's bio wins if non-empty; incoming's is only used to
+    //   fill in a blank bio, same "don't overwrite what's already there"
+    //   principle as everything else here.
+    function mergeItemStats(existing, incoming, strategy) {
+      existing.stats = existing.stats || {};
+      existing.statNotes = existing.statNotes || {};
+      const incomingStats = incoming.stats || {};
+      const incomingNotes = incoming.statNotes || {};
+
+      Object.keys(incomingStats).forEach(cat => {
+        const hasExisting = Object.prototype.hasOwnProperty.call(existing.stats, cat);
+        if (!hasExisting || strategy === 'incoming') {
+          existing.stats[cat] = incomingStats[cat];
+          if (incomingNotes[cat]) existing.statNotes[cat] = incomingNotes[cat];
+          else delete existing.statNotes[cat];
+        }
+        // strategy === 'keep' and hasExisting → leave existing.stats[cat]
+        // and existing.statNotes[cat] untouched entirely.
+      });
+
+      const existingTagsLower = new Set((existing.tags || []).map(t => t.toLowerCase()));
+      const mergedTags = [...(existing.tags || [])];
+      (incoming.tags || []).forEach(t => {
+        if (!existingTagsLower.has(t.toLowerCase())) {
+          mergedTags.push(t);
+          existingTagsLower.add(t.toLowerCase());
+        }
+      });
+      existing.tags = mergedTags;
+
+      const IMG_FIELDS = ['img', 'img2', 'img3', 'img4', 'img5'];
+      const incomingImgs = IMG_FIELDS.map(f => incoming[f]).filter(Boolean);
+      let incomingIdx = 0;
+      IMG_FIELDS.forEach(f => {
+        if (!existing[f] && incomingIdx < incomingImgs.length) {
+          existing[f] = incomingImgs[incomingIdx];
+          incomingIdx++;
+        }
+      });
+
+      if (!existing.bio && incoming.bio) existing.bio = incoming.bio;
+
+      return existing;
+    }
+
     async function handleImport(input) {
       const file = input.files[0]; if (!file) return;
       input.value = '';
@@ -2557,38 +2691,46 @@
           ? confirm(`Merge ${newItems.length} items into your existing ${items.length}?\nCancel = replace all`)
           : false;
         if (doMerge) {
-          // Merges dedupe by id (exact re-import of something exported from
+          // Split by id first (exact re-import of something exported from
           // this same project) — but imports from formats with no id column
           // (XLSX, CSV-shaped data) always get freshly generated ids, so an
           // id-only check would silently create name duplicates every time.
           // Catch that case up front and let the person decide once, rather
           // than finding a pile of "Batman" x2 after the fact.
-          const existingIds   = new Set(items.map(c => c.id));
-          const existingNames = new Set(items.map(c => c.name.toLowerCase()));
+          const existingIds = new Set(items.map(c => c.id));
           const incoming = newItems.filter(c => !existingIds.has(c.id));
-          const nameCollisions = incoming.filter(c => existingNames.has(c.name.toLowerCase()));
 
-          let skipNames = new Set();
+          const existingByName = new Map(items.map(c => [c.name.toLowerCase(), c]));
+          const nameCollisions = incoming.filter(c => existingByName.has(c.name.toLowerCase()));
+
+          let resolution = { action: 'both', strategy: 'keep' }; // default when there's nothing to resolve
           if (nameCollisions.length) {
-            const sample = nameCollisions.slice(0, 5).map(c => `"${c.name}"`).join(', ');
-            const more = nameCollisions.length > 5 ? ` and ${nameCollisions.length - 5} more` : '';
-            const skipDuplicates = confirm(
-              `${nameCollisions.length} incoming item${nameCollisions.length === 1 ? '' : 's'} share${nameCollisions.length === 1 ? 's' : ''} a name with something you already have (${sample}${more}).\n\n` +
-              `OK = skip those, keep only the rest\nCancel = add them anyway as separate items`
-            );
-            if (skipDuplicates) skipNames = new Set(nameCollisions.map(c => c.name.toLowerCase()));
+            resolution = await showDupeResolutionDialog(nameCollisions, incoming.length);
+            if (!resolution) { showToast('Import cancelled.'); return; }
           }
 
-          let addedCount = 0;
-          let skippedCount = 0;
+          let addedCount = 0, mergedCount = 0, skippedCount = 0;
           incoming.forEach(c => {
-            if (skipNames.has(c.name.toLowerCase())) { skippedCount++; return; }
-            items.push(c);
-            addedCount++;
+            const isCollision = existingByName.has(c.name.toLowerCase());
+            if (isCollision && resolution.action === 'skip') {
+              skippedCount++;
+            } else if (isCollision && resolution.action === 'merge') {
+              mergeItemStats(existingByName.get(c.name.toLowerCase()), c, resolution.strategy);
+              mergedCount++;
+            } else {
+              // Not a collision, or the person chose "keep both" — add as
+              // its own separate item either way.
+              items.push(c);
+              addedCount++;
+            }
           });
           newCats.forEach(k => { if (!categories.includes(k)) categories.push(k); });
           save(); render();
-          showToast(`Imported ${addedCount} item${addedCount !== 1 ? 's' : ''}.` + (skippedCount ? ` Skipped ${skippedCount} duplicate${skippedCount === 1 ? '' : 's'}.` : ''));
+          const parts = [];
+          if (addedCount) parts.push(`${addedCount} added`);
+          if (mergedCount) parts.push(`${mergedCount} merged`);
+          if (skippedCount) parts.push(`${skippedCount} skipped`);
+          showToast(`Import complete — ${parts.join(', ')}.`);
         } else {
           items = newItems; categories = newCats;
           save(); render();
@@ -4070,7 +4212,7 @@
         'modal-overlay', 'cat-modal-overlay', 'backup-modal-overlay',
         'settings-modal-overlay', 'projects-modal-overlay', 'cmp-overlay',
         'bulk-overlay', 'viewer-overlay', 'ham-drawer', 'radar-zoom-overlay',
-        'switcher-overlay', 'shortcuts-modal-overlay',
+        'switcher-overlay', 'shortcuts-modal-overlay', 'dupe-modal-overlay',
       ];
       return ids.some(id => document.getElementById(id)?.classList.contains('open'));
     }
@@ -4092,6 +4234,16 @@
         }
         if (document.getElementById('switcher-overlay')?.classList.contains('open')) {
           closeProjectSwitcher();
+          return;
+        }
+        // The duplicate-resolution dialog is a confirm/cancel prompt tied to
+        // an in-flight import — Escape here needs to actually cancel it
+        // (resolving its Promise as null) rather than just hiding the
+        // overlay and leaving that Promise pending forever, so it's routed
+        // through the same Cancel button click the person would otherwise
+        // press, not the flat batch-close below.
+        if (document.getElementById('dupe-modal-overlay')?.classList.contains('open')) {
+          document.getElementById('dupe-cancel-btn')?.click();
           return;
         }
         closeModal(); closePanel(); closeCatModal(); closeCompare(); closeBackupModal();

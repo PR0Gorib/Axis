@@ -2337,6 +2337,182 @@
        Same structural skeleton as the Backup/Categories/Settings modals
        (overlay → sticky header → scrollable body → optional footer hint),
        just with its own content: shortcuts grouped by where they apply. */
+    /* ── IMPORT DUPLICATE RESOLUTION MODAL ── */
+    #dupe-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      z-index: 210;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #dupe-modal-overlay.open {
+      display: flex;
+    }
+
+    #dupe-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 460px;
+      max-height: 88vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #dupe-modal-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 2;
+    }
+
+    #dupe-modal-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--danger);
+    }
+
+    #dupe-modal-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    #dupe-modal-body {
+      padding: 16px 20px 4px;
+    }
+
+    #dupe-modal-summary {
+      font-family: 'Barlow', sans-serif;
+      font-size: .86rem;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 4px;
+    }
+
+    #dupe-modal-names {
+      font-family: 'Barlow', sans-serif;
+      font-size: .78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+      word-break: break-word;
+    }
+
+    .dupe-option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .dupe-option-group-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .74rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 16px 0 8px;
+    }
+
+    .dupe-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+
+    .dupe-option:hover {
+      border-color: var(--accent);
+    }
+
+    .dupe-option:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(var(--accent-rgb), .07);
+    }
+
+    /* Fallback for WebView runtimes without :has() support (older
+       WebKitGTK on some Linux setups) — the dupe-modal JS also toggles this
+       class directly on change, so the selected-state highlight still
+       works even where the CSS selector above doesn't apply. */
+    .dupe-option.checked {
+      border-color: var(--accent);
+      background: rgba(var(--accent-rgb), .07);
+    }
+
+    .dupe-option input[type="radio"] {
+      margin-top: 2px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .dupe-option-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .86rem;
+      color: var(--text);
+    }
+
+    .dupe-option-desc {
+      font-family: 'Barlow', sans-serif;
+      font-size: .76rem;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    .dupe-option.compact {
+      padding: 8px 12px;
+    }
+
+    /* Stat-conflict strategy only makes sense when "Merge" is selected —
+       hidden by default, shown via JS when that radio is active rather
+       than always visible and just disabled, so the modal doesn't ask
+       about a setting that currently has no effect. */
+    #dupe-merge-strategy {
+      display: none;
+    }
+
+    #dupe-merge-strategy.visible {
+      display: block;
+    }
+
+    #dupe-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      position: sticky;
+      bottom: 0;
+      background: var(--surface);
+    }
+
+    body.light #dupe-modal {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
     #shortcuts-modal-overlay {
       position: fixed;
       inset: 0;

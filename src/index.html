@@ -334,6 +334,65 @@
     </div>
   </div>
 
+  <!-- IMPORT DUPLICATE RESOLUTION MODAL -->
+  <div id="dupe-modal-overlay">
+    <div id="dupe-modal" role="dialog" aria-modal="true" aria-labelledby="dupe-modal-title">
+      <div id="dupe-modal-header">
+        <h2 id="dupe-modal-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Duplicate Items Found</h2>
+      </div>
+      <div id="dupe-modal-body">
+        <p id="dupe-modal-summary"></p>
+        <div id="dupe-modal-names"></div>
+
+        <div class="dupe-option-group" id="dupe-action-group" role="radiogroup" aria-label="What to do with duplicates">
+          <label class="dupe-option">
+            <input type="radio" name="dupe-action" value="merge" checked>
+            <div class="dupe-option-text">
+              <div class="dupe-option-title">Merge into existing</div>
+              <div class="dupe-option-desc">Combine images and tags; choose below which stat values to keep on conflicts.</div>
+            </div>
+          </label>
+          <label class="dupe-option">
+            <input type="radio" name="dupe-action" value="skip">
+            <div class="dupe-option-text">
+              <div class="dupe-option-title">Skip duplicates</div>
+              <div class="dupe-option-desc">Keep your existing items untouched; don't import these.</div>
+            </div>
+          </label>
+          <label class="dupe-option">
+            <input type="radio" name="dupe-action" value="both">
+            <div class="dupe-option-text">
+              <div class="dupe-option-title">Keep both</div>
+              <div class="dupe-option-desc">Add the incoming items as separate entries alongside your existing ones.</div>
+            </div>
+          </label>
+        </div>
+
+        <div id="dupe-merge-strategy">
+          <div class="dupe-option-group-label">When a stat exists on both with different values:</div>
+          <div class="dupe-option-group" id="dupe-strategy-group" role="radiogroup" aria-label="Stat conflict strategy">
+            <label class="dupe-option compact">
+              <input type="radio" name="dupe-strategy" value="keep" checked>
+              <div class="dupe-option-text">
+                <div class="dupe-option-title">Keep existing value</div>
+              </div>
+            </label>
+            <label class="dupe-option compact">
+              <input type="radio" name="dupe-strategy" value="incoming">
+              <div class="dupe-option-text">
+                <div class="dupe-option-title">Take incoming value</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div id="dupe-modal-footer">
+        <button class="btn small" id="dupe-cancel-btn">Cancel Import</button>
+        <button class="btn small primary" id="dupe-confirm-btn">Continue</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
   <div id="settings-modal-overlay">
     <div id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
