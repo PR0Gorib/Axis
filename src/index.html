@@ -59,7 +59,7 @@
       </button>
       <button class="ham-btn" onclick="openProjectsModal();closeHamMenu()">
         <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span> Projects
-        <span class="ham-shortcut-hint">⌘K</span>
+        <span class="ham-shortcut-hint">Ctrl+K</span>
       </button>
       <button class="ham-btn" onclick="openCatModal();closeHamMenu()">
         <span class="ham-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span> Categories
@@ -312,8 +312,8 @@
         <div class="shortcuts-group">
           <div class="shortcuts-group-title">General</div>
           <div class="shortcut-row"><span class="shortcut-desc">Add a new item</span><span class="shortcut-keys"><kbd>N</kbd></span></div>
-          <div class="shortcut-row"><span class="shortcut-desc">Jump to search</span><span class="shortcut-keys"><kbd class="ham-shortcut-hint">⌘F</kbd></span></div>
-          <div class="shortcut-row"><span class="shortcut-desc">Switch project</span><span class="shortcut-keys"><kbd class="ham-shortcut-hint">⌘K</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Jump to search</span><span class="shortcut-keys"><kbd class="ham-shortcut-hint">Ctrl+F</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Switch project</span><span class="shortcut-keys"><kbd class="ham-shortcut-hint">Ctrl+K</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Close a panel, modal, or dialog</span><span class="shortcut-keys"><kbd>Esc</kbd></span></div>
         </div>
         <div class="shortcuts-group">
@@ -330,6 +330,39 @@
       </div>
       <div id="shortcuts-modal-hint">
         Shortcuts are disabled while typing in a field, and most are scoped to whatever's currently open — e.g. <kbd>E</kbd> only works while an item's panel is open.
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPORT MODE MODAL -->
+  <div id="import-mode-modal-overlay">
+    <div id="import-mode-modal" role="dialog" aria-modal="true" aria-labelledby="import-mode-modal-title">
+      <div id="import-mode-modal-header">
+        <h2 id="import-mode-modal-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Import File</h2>
+      </div>
+      <div id="import-mode-modal-body">
+        <p id="import-mode-modal-summary"></p>
+
+        <div class="dupe-option-group" id="import-mode-group" role="radiogroup" aria-label="How to import">
+          <label class="dupe-option">
+            <input type="radio" name="import-mode" value="merge" checked>
+            <div class="dupe-option-text">
+              <div class="dupe-option-title">Merge with existing</div>
+              <div class="dupe-option-desc">Add the incoming items to your current project. You'll be asked how to handle any name matches.</div>
+            </div>
+          </label>
+          <label class="dupe-option danger">
+            <input type="radio" name="import-mode" value="replace">
+            <div class="dupe-option-text">
+              <div class="dupe-option-title">Replace everything</div>
+              <div class="dupe-option-desc">Delete all <span id="import-mode-existing-count">0</span> of your current items and categories, and replace them with the imported file.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div id="import-mode-modal-footer">
+        <button class="btn small" id="import-mode-cancel-btn">Cancel</button>
+        <button class="btn small primary" id="import-mode-confirm-btn">Continue</button>
       </div>
     </div>
   </div>

@@ -2552,6 +2552,57 @@
     // a Promise resolving to { action: 'merge'|'skip'|'both', strategy:
     // 'keep'|'incoming' } once the person picks, or null if they cancel the
     // whole import outright.
+    // ── IMPORT MODE ──────────────────────────────────────
+    // First decision point for importing over an existing project: merge
+    // with the current items, or wipe them and replace with the imported
+    // file. This used to be a native confirm() ("OK = merge, Cancel =
+    // replace") — easy to misread the Cancel button as "cancel the import"
+    // when it actually meant "delete everything and replace it", with no
+    // way to back out once clicked. Returns a Promise resolving to
+    // 'merge' | 'replace', or null if the person cancels outright.
+    function showImportModeDialog(existingCount, incomingCount) {
+      return new Promise(resolve => {
+        const overlay = document.getElementById('import-mode-modal-overlay');
+        const summary = document.getElementById('import-mode-modal-summary');
+        const countEl = document.getElementById('import-mode-existing-count');
+
+        summary.textContent = `This file has ${incomingCount} item${incomingCount === 1 ? '' : 's'}. You currently have ${existingCount} item${existingCount === 1 ? '' : 's'} in this project.`;
+        countEl.textContent = existingCount;
+
+        overlay.querySelector('input[name="import-mode"][value="merge"]').checked = true;
+        const inputs = overlay.querySelectorAll('input[name="import-mode"]');
+        const syncChecked = () => inputs.forEach(el =>
+          el.closest('.dupe-option').classList.toggle('checked', el.checked));
+        syncChecked();
+        const onChange = () => syncChecked();
+        inputs.forEach(el => el.addEventListener('change', onChange));
+
+        const confirmBtn = document.getElementById('import-mode-confirm-btn');
+        const cancelBtn  = document.getElementById('import-mode-cancel-btn');
+
+        const cleanup = () => {
+          inputs.forEach(el => el.removeEventListener('change', onChange));
+          confirmBtn.onclick = null;
+          cancelBtn.onclick = null;
+          overlay.classList.remove('open');
+          releaseFocus(document.getElementById('import-mode-modal'));
+        };
+
+        confirmBtn.onclick = () => {
+          const mode = overlay.querySelector('input[name="import-mode"]:checked').value;
+          cleanup();
+          resolve(mode);
+        };
+        cancelBtn.onclick = () => {
+          cleanup();
+          resolve(null);
+        };
+
+        overlay.classList.add('open');
+        trapFocus(document.getElementById('import-mode-modal'));
+      });
+    }
+
     function showDupeResolutionDialog(nameCollisions, incomingCount) {
       return new Promise(resolve => {
         const overlay  = document.getElementById('dupe-modal-overlay');
@@ -2687,10 +2738,14 @@
       try {
         const { items: newItems, categories: newCats } = await axisParseImport(file);
         if (!newItems?.length && !newCats?.length) throw new Error('Empty or bad format');
-        const doMerge = items.length
-          ? confirm(`Merge ${newItems.length} items into your existing ${items.length}?\nCancel = replace all`)
-          : false;
-        if (doMerge) {
+
+        let mode = 'replace'; // nothing to merge into on an empty project
+        if (items.length) {
+          mode = await showImportModeDialog(items.length, newItems.length);
+          if (!mode) { showToast('Import cancelled.'); return; }
+        }
+
+        if (mode === 'merge') {
           // Split by id first (exact re-import of something exported from
           // this same project) — but imports from formats with no id column
           // (XLSX, CSV-shaped data) always get freshly generated ids, so an
@@ -3607,7 +3662,7 @@
 
         // ── 6. Item name ─────────────────────────────────────────────────────
         const nameSize   = NAME_Y > H * 0.48 ? 28 : 24; // shrink if tight
-        const nameFont   = `800 ${nameSize}px system-ui,-apple-system,Arial,sans-serif`;
+        const nameFont   = `800 ${nameSize}px system-ui,Arial,sans-serif`;
         const nameMaxW   = W - PAD * 2 - 80; // leave room for score badge
         txt(trunc(item.name, nameMaxW, nameFont), PAD, NAME_Y, nameFont, C_WHITE);
 
@@ -3780,7 +3835,7 @@
       box(0, 0, W, H, C_BG);
 
       // ── Header ───────────────────────────────────────────────────────
-      txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
+      txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,Arial,sans-serif', C_WHITE, 'left');
       const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
       txt(`${totalCount} item${totalCount === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
           '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
@@ -3827,7 +3882,7 @@
         const nameX    = thumbX + thumbSize + 14;
         const scoreStr = overallScore(item).toFixed(1);
         const nameMaxW = W - PAD - nameX - measure(scoreStr, '800 16px system-ui,Arial,sans-serif') - 50;
-        const nameFont = '700 15px system-ui,-apple-system,Arial,sans-serif';
+        const nameFont = '700 15px system-ui,Arial,sans-serif';
         txt(trunc(item.name, nameMaxW, nameFont), nameX, ry + ROW_H / 2 - 3, nameFont, C_WHITE, 'left');
 
         const barY = ry + ROW_H / 2 + 8;
@@ -3921,7 +3976,7 @@
       box(0, 0, W, H, C_BG);
 
       // ── Header ───────────────────────────────────────────────────────
-      txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,-apple-system,Arial,sans-serif', C_WHITE, 'left');
+      txt('🏆 Axis Ranking', PAD, 34, '800 22px system-ui,Arial,sans-serif', C_WHITE, 'left');
       const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
       txt(`${totalCount} item${totalCount === 1 ? '' : 's'} · ${dateStr}`, W - PAD, 34,
           '600 12px system-ui,Arial,sans-serif', C_LABEL, 'right');
@@ -3980,7 +4035,7 @@
 
         // Name
         const textY1 = thumbY + thumbSize + 20;
-        const nameFont = '700 13px system-ui,-apple-system,Arial,sans-serif';
+        const nameFont = '700 13px system-ui,Arial,sans-serif';
         txt(trunc(item.name, CARD_W - 24, nameFont), cx + 12, textY1, nameFont, C_WHITE, 'left');
 
         // Score bar
@@ -4102,7 +4157,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg); color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    font-family: system-ui, "Segoe UI", Arial, sans-serif;
     padding: 32px 20px 60px;
   }
   .wrap { max-width: 720px; margin: 0 auto; }
@@ -4213,6 +4268,7 @@
         'settings-modal-overlay', 'projects-modal-overlay', 'cmp-overlay',
         'bulk-overlay', 'viewer-overlay', 'ham-drawer', 'radar-zoom-overlay',
         'switcher-overlay', 'shortcuts-modal-overlay', 'dupe-modal-overlay',
+        'import-mode-modal-overlay',
       ];
       return ids.some(id => document.getElementById(id)?.classList.contains('open'));
     }
@@ -4234,6 +4290,14 @@
         }
         if (document.getElementById('switcher-overlay')?.classList.contains('open')) {
           closeProjectSwitcher();
+          return;
+        }
+        // Same reasoning as the duplicate-resolution dialog just below —
+        // this is also a Promise-based confirm/cancel prompt, so Escape
+        // routes through its actual Cancel button rather than just hiding
+        // the overlay and leaving the import Promise pending forever.
+        if (document.getElementById('import-mode-modal-overlay')?.classList.contains('open')) {
+          document.getElementById('import-mode-cancel-btn')?.click();
           return;
         }
         // The duplicate-resolution dialog is a confirm/cancel prompt tied to
@@ -4327,13 +4391,6 @@
     (async () => {
       loadTemplates();
 
-      // Shortcut hints default to the Mac symbol in markup; correct to
-      // "Ctrl" text on other platforms
-      if (!/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '')) {
-        document.querySelectorAll('.ham-shortcut-hint').forEach(el => {
-          el.textContent = el.textContent.replace('⌘', 'Ctrl+');
-        });
-      }
 
       // Everything below touches storage, settings, and platform-specific
       // APIs — none of it has been exercised on every target this app now

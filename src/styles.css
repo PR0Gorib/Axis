@@ -514,7 +514,7 @@
     }
 
     body {
-      font-family: 'Barlow', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+      font-family: 'Barlow', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -577,7 +577,7 @@
     }
 
     #panel-bio {
-      font-family: 'Barlow', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+      font-family: 'Barlow', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }
 
     /* ── HEADER ── */
@@ -717,7 +717,7 @@
       border: 1px solid var(--border);
       border-radius: 3px;
       color: var(--text);
-      font-family: 'Barlow', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+      font-family: 'Barlow', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
       font-size: .82rem;
       padding: 6px 26px 6px 28px;
       outline: none;
@@ -2338,6 +2338,117 @@
        (overlay → sticky header → scrollable body → optional footer hint),
        just with its own content: shortcuts grouped by where they apply. */
     /* ── IMPORT DUPLICATE RESOLUTION MODAL ── */
+    /* ── IMPORT MODE MODAL ──
+       First decision point when importing over an existing project: merge
+       or fully replace. Never open at the same time as #dupe-modal-overlay
+       (this always closes before that one can open), so it's fine to share
+       its z-index rather than needing its own tier. */
+    #import-mode-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      z-index: 210;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #import-mode-modal-overlay.open {
+      display: flex;
+    }
+
+    #import-mode-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 88vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #import-mode-modal-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 2;
+    }
+
+    #import-mode-modal-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #import-mode-modal-header h2 svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    #import-mode-modal-body {
+      padding: 16px 20px 4px;
+    }
+
+    #import-mode-modal-summary {
+      font-family: 'Barlow', sans-serif;
+      font-size: .86rem;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    #import-mode-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      position: sticky;
+      bottom: 0;
+      background: var(--surface);
+    }
+
+    /* The destructive "replace everything" option — same card shape as
+       .dupe-option, but red-tinted so it visually reads as dangerous
+       rather than sitting identical to a safe choice right above it. */
+    .dupe-option.danger {
+      border-color: rgba(var(--danger-rgb), .35);
+    }
+
+    .dupe-option.danger:hover {
+      border-color: var(--danger);
+    }
+
+    .dupe-option.danger:has(input:checked),
+    .dupe-option.danger.checked {
+      border-color: var(--danger);
+      background: rgba(var(--danger-rgb), .08);
+    }
+
+    .dupe-option.danger input[type="radio"] {
+      accent-color: var(--danger);
+    }
+
+    .dupe-option.danger .dupe-option-title {
+      color: var(--danger);
+    }
+
+    body.light #import-mode-modal {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
     #dupe-modal-overlay {
       position: fixed;
       inset: 0;
