@@ -2739,8 +2739,26 @@
         const { items: newItems, categories: newCats } = await axisParseImport(file);
         if (!newItems?.length && !newCats?.length) throw new Error('Empty or bad format');
 
-        let mode = 'replace'; // nothing to merge into on an empty project
-        if (items.length) {
+        // The Merge-or-Replace choice only matters — and is only worth
+        // interrupting the person for — when the incoming file plausibly
+        // COULD be a full backup/export of a library roughly this size
+        // (re-importing your own data, or someone else's whole collection).
+        // Importing a handful of new items into an existing library is the
+        // overwhelmingly common case and should just merge immediately,
+        // with no dialog at all: silently asking "did you mean to delete
+        // your 20 items?" every time someone adds one duplicate item reads
+        // as alarming for something routine. The 50% line means "this file
+        // has at least half as many items as I already have" — small
+        // enough to rule out an accidental full-replace on a trivial
+        // import, large enough to still catch the real case (re-importing
+        // a backup, or a merge of two similarly-sized libraries) where
+        // asking first is worth the interruption.
+        const looksLikeFullReplace = items.length > 0 && newItems.length >= items.length * 0.5;
+
+        let mode = 'merge';
+        if (!items.length) {
+          mode = 'replace'; // nothing to merge into on an empty project
+        } else if (looksLikeFullReplace) {
           mode = await showImportModeDialog(items.length, newItems.length);
           if (!mode) { showToast('Import cancelled.'); return; }
         }
