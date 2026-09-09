@@ -1421,6 +1421,20 @@
       ];
     }
 
+    // Live --accent value for the shareable image exports below. Everything
+    // else in those exports (background, white text, translucent labels/
+    // dividers) stays fixed regardless of theme, so a shared image looks
+    // consistent to whoever receives it — but the accent color is the
+    // app's own "branding" color, and using whatever theme is actually
+    // active makes the export feel like it's actually from your app instead
+    // of always defaulting back to the original red no matter what you've
+    // set. Falls back to the original rose-red if read fails for any reason
+    // (e.g. called before the stylesheet has loaded).
+    function getExportAccentColor() {
+      const cs = getComputedStyle(document.body);
+      return cs.getPropertyValue('--accent').trim() || '#d94f5c';
+    }
+
     // Wrap a category label to fit maxWidth px, using at most 2 lines.
     // Long single words are truncated but never below half their original
     // length, so the reader always gets at least the meaningful first half
@@ -3580,9 +3594,13 @@
       const STAT_ROW_H = N > 0 ? Math.min(34, Math.max(24, Math.floor(180 / N))) : 30;
       const STATS_BLOCK = N * STAT_ROW_H + 90; // +90 for name/score/divider/footer
 
-      // Fixed palette — always dark so the output looks sharp regardless of theme
+      // Background and text stay fixed dark/white regardless of theme, so
+      // the export always looks sharp and consistent to whoever receives
+      // it — but the accent DOES follow whatever theme is active, so the
+      // export reflects your actual chosen colors rather than always
+      // defaulting to the original red.
       const C_BG     = '#09090d';
-      const C_ACCENT = '#d94f5c';
+      const C_ACCENT = getExportAccentColor();
       const C_WHITE  = '#ffffff';
       const C_LABEL  = 'rgba(255,255,255,0.54)';
       const C_TRACK  = 'rgba(255,255,255,0.12)';
@@ -3796,11 +3814,13 @@
       const FOOTER_H = overflow > 0 ? 46 : 30;
       const H = HEADER_H + shown.length * ROW_H + FOOTER_H;
 
-      // Fixed dark palette — always looks the same regardless of the app's
-      // current theme, same as the single-item share image
+      // Background/row tint/text stay fixed, same as the single-item share
+      // image — but the accent follows the active theme (see
+      // getExportAccentColor), so this export reflects your actual chosen
+      // colors instead of always defaulting back to the original red.
       const C_BG     = '#09090d';
       const C_ROW    = '#131319'; // alternating row tint
-      const C_ACCENT = '#d94f5c';
+      const C_ACCENT = getExportAccentColor();
       const C_WHITE  = '#ffffff';
       const C_LABEL  = 'rgba(255,255,255,0.5)';
       const C_TRACK  = 'rgba(255,255,255,0.12)';
@@ -3937,11 +3957,13 @@
       const W    = PAD * 2 + COLS * CARD_W + (COLS - 1) * GAP;
       const H    = HEADER_H + rows * CARD_H + (rows - 1) * GAP + FOOTER_H;
 
-      // Same fixed dark palette as the list format, so both formats look
-      // like they belong to the same product regardless of app theme
+      // Same fixed background/card/text as the list format, so both formats
+      // look like they belong to the same product — the accent still
+      // follows the active theme (see getExportAccentColor), consistent
+      // with the list format above.
       const C_BG     = '#09090d';
       const C_CARD   = '#131319';
-      const C_ACCENT = '#d94f5c';
+      const C_ACCENT = getExportAccentColor();
       const C_WHITE  = '#ffffff';
       const C_LABEL  = 'rgba(255,255,255,0.5)';
       const C_TRACK  = 'rgba(255,255,255,0.12)';
