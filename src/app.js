@@ -41,10 +41,23 @@
     }
 
     async function axisLoad() {
-      // Try primary storage (Tauri disk) first
+      // Try primary storage (Tauri disk) first. Trust ANY successful read —
+      // including a genuinely empty { items: [], categories: [] } for a
+      // freshly created project — rather than only trusting it when the
+      // arrays happen to be non-empty. The old check here
+      // (`data.items.length || data.categories.length`) meant a real,
+      // correctly-empty new project would fail that condition and silently
+      // fall through to the localStorage branch below instead — which
+      // holds a GLOBAL, non-project-scoped fallback key that axisSave()
+      // writes to only as a last resort if a disk write ever fails. If
+      // that had happened even once in an earlier session, a brand new
+      // empty project would incorrectly resurrect that old, unrelated data
+      // instead of loading as empty. loadData() already returns null on
+      // any real failure, so checking for that is the correct signal here,
+      // not the emptiness of a successful read.
       try {
         const data = await AxisStorage.loadData();
-        if (data && (data.items.length || data.categories.length)) return data;
+        if (data) return data;
       } catch (e) { console.error('[Axis] loadData failed:', e); }
       // Fallback: localStorage (covers browser mode + Tauri disk failures)
       try {

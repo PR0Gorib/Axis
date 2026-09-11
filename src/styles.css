@@ -2577,13 +2577,22 @@
       cursor: pointer;
     }
 
+    /* Wraps each option's title+description inside the flex .dupe-option
+       row (see below) — without flex:1/min-width:0 here, this div doesn't
+       reliably claim the remaining row width next to the radio input, so
+       longer descriptions (e.g. "Delete all X of your current items...")
+       could crowd or size unpredictably instead of wrapping cleanly. */
+    .dupe-option-text {
+      flex: 1;
+      min-width: 0;
+    }
+
     .dupe-option-title {
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 700;
       font-size: .86rem;
       color: var(--text);
     }
-
     .dupe-option-desc {
       font-family: 'Barlow', sans-serif;
       font-size: .76rem;
