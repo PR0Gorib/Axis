@@ -25,7 +25,7 @@
     // ── VERSION / UPDATE CHECK ──────────────────────────
     // Keep this in sync with the version shown in the Settings > About panel
     // and with the tag of the most recent GitHub release.
-    const APP_VERSION = '1.8.0';
+    const APP_VERSION = '1.9.0';
     const UPDATE_REPO = 'PR0Gorib/Axis';
     let updateDismissed = false; // don't re-show the banner after the user closes it, for this session
 
@@ -1334,6 +1334,18 @@
         statsEl.innerHTML = '<p style="font-size:.82rem;color:var(--muted);">No categories defined yet.</p>';
       }
 
+      renderPanelHistoryChart(item);
+      if (_panelHistoryResizeHandler) window.removeEventListener('resize', _panelHistoryResizeHandler);
+      let _historyResizeT;
+      _panelHistoryResizeHandler = () => {
+        clearTimeout(_historyResizeT);
+        _historyResizeT = setTimeout(() => {
+          const current = items.find(x => x.id === id);
+          if (current) renderPanelHistoryChart(current);
+        }, 120);
+      };
+      window.addEventListener('resize', _panelHistoryResizeHandler);
+
       const pinBtn = document.getElementById('panel-pin-btn');
       pinBtn.innerHTML = `${Icons.pin} ${item.pinned ? 'Unpin' : 'Pin'}`;
       pinBtn.onclick = () => pinItem(id);
@@ -1346,10 +1358,16 @@
       document.getElementById('panel').classList.add('open');
       trapFocus(document.getElementById('panel'));
     }
+    let _panelHistoryResizeHandler = null;
+
     function closePanel() {
       document.getElementById('panel-overlay').classList.remove('open');
       document.getElementById('panel').classList.remove('open');
       releaseFocus(document.getElementById('panel'));
+      if (_panelHistoryResizeHandler) {
+        window.removeEventListener('resize', _panelHistoryResizeHandler);
+        _panelHistoryResizeHandler = null;
+      }
     }
 
     // ── COMPARE VIEW ───────────────────────────────────
@@ -1890,6 +1908,168 @@
       });
     }
 
+    // ── SCORE HISTORY ────────────────────────────────────
+    // Each item keeps its own `scoreHistory` array — [{t, overall, stats}]
+    // — recorded whenever an edit actually changes at least one stat
+    // value. Lives on the item itself (not a separate file) so it travels
+    // naturally through export/import/duplicate/merge with zero extra
+    // plumbing, same as tags or statNotes already do.
+    function recordScoreHistoryIfChanged(item, newStats) {
+      const oldStats = item.stats || {};
+      const changed = Object.keys(newStats).some(k => (oldStats[k] ?? 0) !== (newStats[k] ?? 0))
+        || Object.keys(oldStats).some(k => !(k in newStats));
+      if (!changed) return;
+      // statMax is captured per-point (not just used live at chart time) so
+      // that if this project's scale is ever changed later (0-10 -> 0-100
+      // or back), older points still carry the scale they were actually
+      // recorded against. The chart itself doesn't yet normalize across a
+      // scale change — it currently just plots every point against
+      // whatever statMax is active right now, which will look wrong for
+      // old points if the scale changed since — but keeping this here
+      // means that normalization can be added later without needing to
+      // somehow recover already-lost information.
+      if (!Array.isArray(item.scoreHistory) || item.scoreHistory.length === 0) {
+        // This item predates the Score History feature (or was otherwise
+        // never given a starting point) — its very first edit would
+        // otherwise only ever produce ONE point (today's), and the chart
+        // needs 2 before it shows anything at all. Back-fill a point for
+        // "right before this edit" using its OLD stats, dated to when the
+        // item was created (the earliest honest timestamp available,
+        // since the true edit history before now was never recorded) —
+        // so a single edit on an existing item is enough to see a chart,
+        // the same way a single edit already was for a brand new one.
+        item.scoreHistory = [{
+          t: item.createdAt || Date.now(),
+          overall: overallScore({ stats: oldStats }),
+          stats: { ...oldStats },
+          statMax,
+        }];
+      }
+      item.scoreHistory.push({ t: Date.now(), overall: overallScore({ stats: newStats }), stats: { ...newStats }, statMax });
+    }
+
+    let _historyViewMode = 'overall'; // 'overall' | 'category' — persists across panel opens for the session
+    let _historyItemId = null;
+
+    function setHistoryViewMode(mode) {
+      _historyViewMode = mode;
+      document.querySelectorAll('.panel-history-toggle-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.mode === mode));
+      const item = items.find(x => x.id === _historyItemId);
+      if (item) renderPanelHistoryChart(item);
+    }
+
+    // Renders (or hides) the Score History section for the given item.
+    // Needs at least 2 points to draw a meaningful line — a single point
+    // is just "today's score" with nothing to compare it against, so the
+    // section stays hidden entirely rather than showing a flat dot.
+    function renderPanelHistoryChart(item) {
+      const section = document.getElementById('panel-history-section');
+      const history = item.scoreHistory || [];
+      if (history.length < 2) {
+        section.classList.remove('has-data');
+        return;
+      }
+      section.classList.add('has-data');
+      _historyItemId = item.id;
+
+      const canvas = document.getElementById('panel-history-canvas');
+      const legend = document.getElementById('panel-history-legend');
+      const ink = _chartInkRGB();
+      const accentColors = getCmpRadarColors(); // reused for per-category line colors
+
+      const width  = Math.max(200, canvas.clientWidth || canvas.parentElement.clientWidth || 320);
+      const height = 160;
+      const DPR = Math.max(1, Math.round(window.devicePixelRatio || 1));
+      canvas.width  = width * DPR;
+      canvas.height = height * DPR;
+      canvas.style.width  = width + 'px';
+      canvas.style.height = height + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(DPR, DPR);
+      ctx.clearRect(0, 0, width, height);
+
+      const padL = 34, padR = 10, padT = 10, padB = 22;
+      const x0 = padL, x1 = width - padR;
+      const y0 = padT,  y1 = height - padB;
+      const plotW = x1 - x0, plotH = y1 - y0;
+
+      const tMin = history[0].t, tMax = history[history.length - 1].t;
+      const tSpan = Math.max(1, tMax - tMin); // avoid divide-by-zero if all points share a timestamp
+      const xFor = t => x0 + ((t - tMin) / tSpan) * plotW;
+      const yFor = v => y1 - Math.min(1, Math.max(0, v / statMax)) * plotH;
+
+      // Y-axis gridlines (0 / 50% / 100% of statMax)
+      ctx.strokeStyle = `rgba(${ink},0.14)`;
+      ctx.font = '500 10px Barlow, system-ui, sans-serif';
+      ctx.fillStyle = `rgba(${ink},0.55)`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      [0, 0.5, 1].forEach(frac => {
+        const gy = y1 - plotH * frac;
+        ctx.beginPath();
+        ctx.moveTo(x0, gy); ctx.lineTo(x1, gy);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillText(String(Math.round(statMax * frac)), x0 - 7, gy);
+      });
+
+      // X-axis date labels — first and last point only, to avoid overlap
+      // on a narrow panel regardless of how many points are plotted
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const fmtDate = t => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      ctx.fillText(fmtDate(tMin), x0, y1 + 6);
+      ctx.textAlign = 'right';
+      ctx.fillText(fmtDate(tMax), x1, y1 + 6);
+
+      legend.innerHTML = '';
+
+      function drawLine(points, color) {
+        if (points.length < 2) return;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        points.forEach((p, i) => {
+          const px = xFor(p.t), py = yFor(p.v);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        // Dot at each real data point, so individual edits are visible,
+        // not just the interpolated line between them
+        ctx.fillStyle = color;
+        points.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(xFor(p.t), yFor(p.v), 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      if (_historyViewMode === 'overall') {
+        drawLine(history.map(h => ({ t: h.t, v: h.overall })), getExportAccentColor());
+      } else {
+        // One line per CURRENT category — a category renamed or removed
+        // after some history points were recorded simply won't have data
+        // for those older points; .filter below only plots categories that
+        // have at least one real (non-undefined) recorded value, so a
+        // brand new category with zero history doesn't draw a flat
+        // meaningless line at 0.
+        categories.forEach((cat, i) => {
+          const points = history
+            .filter(h => h.stats && h.stats[cat] !== undefined)
+            .map(h => ({ t: h.t, v: h.stats[cat] }));
+          if (points.length < 2) return;
+          const color = accentColors[i % accentColors.length];
+          drawLine(points, color);
+          const item2 = document.createElement('div');
+          item2.className = 'panel-history-legend-item';
+          item2.innerHTML = `<span class="panel-history-legend-swatch" style="background:${color}"></span>${esc(cat)}`;
+          legend.appendChild(item2);
+        });
+      }
+    }
+
     function saveItem() {
       const name = document.getElementById('f-name').value.trim();
       if (!name) { showToast('Name is required.', true); return; }
@@ -1922,10 +2102,21 @@
       let isDuplicateName = false;
       if (editingId) {
         const item = items.find(x => x.id === editingId);
-        if (item) Object.assign(item, { name, img, img2, img3, img4, img5, bio, stats, tags, statNotes });
+        if (item) {
+          recordScoreHistoryIfChanged(item, stats);
+          Object.assign(item, { name, img, img2, img3, img4, img5, bio, stats, tags, statNotes });
+        }
       } else {
         isDuplicateName = items.some(x => x.name.toLowerCase() === name.toLowerCase());
-        items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, img, img2, img3, img4, img5, bio, stats, tags, statNotes, createdAt: Date.now() });
+        const newItem = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, img, img2, img3, img4, img5, bio, stats, tags, statNotes, createdAt: Date.now() };
+        // First point on the timeline — without this, a brand new item's
+        // history would start empty and only gain a second point (and
+        // therefore anything worth charting) the first time it's edited,
+        // which could be days or weeks later depending on how the person
+        // uses Axis. Recording day one gives every item a real starting
+        // point immediately.
+        newItem.scoreHistory = [{ t: newItem.createdAt, overall: overallScore({ stats }), stats: { ...stats }, statMax }];
+        items.push(newItem);
       }
 
       save(); closeModal(); render();
@@ -2755,6 +2946,22 @@
 
       if (!existing.bio && incoming.bio) existing.bio = incoming.bio;
 
+      // Combine both items' timelines rather than picking one side — a
+      // duplicate found during import has its own independent history, and
+      // dropping either one would erase real timeline data. Sorted by time
+      // and deduplicated on exact (t, overall) collisions, which would
+      // otherwise happen every time the same file gets imported more than
+      // once (each import attempt would otherwise re-add identical points).
+      const combinedHistory = [...(existing.scoreHistory || []), ...(incoming.scoreHistory || [])]
+        .sort((a, b) => a.t - b.t);
+      const seen = new Set();
+      existing.scoreHistory = combinedHistory.filter(p => {
+        const key = `${p.t}|${p.overall}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
       return existing;
     }
 
@@ -3260,6 +3467,12 @@
       copy.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       copy.name = src.name + ' (Copy)';
       copy.createdAt = Date.now();
+      // Reset the timeline to a single fresh point rather than carrying
+      // over the original's full history — a duplicate's score history
+      // should start from when IT was created, not silently inherit the
+      // original's actual creation date and edit history as if the copy
+      // had existed just as long.
+      copy.scoreHistory = [{ t: copy.createdAt, overall: overallScore({ stats: copy.stats || {} }), stats: { ...(copy.stats || {}) }, statMax }];
       const srcIdx = items.findIndex(x => x.id === id);
       items.splice(srcIdx + 1, 0, copy);
       save(); render();

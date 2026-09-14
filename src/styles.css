@@ -1725,6 +1725,105 @@
       margin-bottom: 9px;
     }
 
+    /* ── SCORE HISTORY (panel) ──
+       Sits right below the stat bars in the item panel. Hidden by default
+       (see the JS-driven .has-data class below) — an item with fewer than
+       2 history points has nothing to chart, so the section doesn't render
+       an empty/single-dot canvas that would just look broken. */
+    #panel-history-section {
+      display: none;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    #panel-history-section.has-data {
+      display: block;
+    }
+
+    #panel-history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    #panel-history-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .82rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    #panel-history-toggle {
+      display: flex;
+      gap: 4px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px;
+    }
+
+    .panel-history-toggle-btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: .7rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+
+    .panel-history-toggle-btn:hover {
+      color: var(--text);
+    }
+
+    .panel-history-toggle-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #panel-history-canvas {
+      width: 100%;
+      height: 160px;
+      display: block;
+    }
+
+    #panel-history-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 14px;
+      margin-top: 10px;
+    }
+
+    .panel-history-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Barlow', sans-serif;
+      font-size: .74rem;
+      color: var(--muted);
+    }
+
+    .panel-history-legend-swatch {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    body.light .panel-history-toggle-btn.active {
+      color: #fff;
+    }
+
     .stat-label {
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 700;
