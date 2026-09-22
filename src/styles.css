@@ -1401,12 +1401,18 @@
       cursor: pointer;
       transition: border-color .15s, transform .15s, box-shadow .15s;
       position: relative;
+      box-shadow: 0 0 0 0 transparent;
     }
 
     .card:hover {
       border-color: var(--accent);
       transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(var(--accent-rgb), .12);
+      /* Top-edge glow + soft shadow — this replaced an earlier "4px 16px
+         shadow only" hover state (previously declared here, then silently
+         overridden by a second .card:hover further down the file with an
+         equal-specificity, later-wins rule — consolidated into this one
+         declaration so there's no hidden second version to lose track of) */
+      box-shadow: 0 -2px 0 0 var(--accent), 0 4px 16px rgba(var(--accent-rgb), .1);
     }
 
     .card.selected {
@@ -4343,7 +4349,15 @@
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 900;
       font-size: 1.1rem;
+      /* Gradient text (see the background/-webkit-text-fill-color below)
+         is what actually renders — this plain color is a fallback ONLY
+         for a browser that ignores background-clip:text entirely (rare,
+         but a real fallback beats invisible/black text if it happens). */
       color: var(--accent);
+      background: linear-gradient(135deg, var(--rank1), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       min-width: 40px;
       text-align: right;
       flex-shrink: 0;
@@ -4584,17 +4598,6 @@
 
     /* ── PERSONAL TOUCHES ── */
 
-    /* Card hover — subtle accent glow on top edge */
-    .card {
-      box-shadow: 0 0 0 0 transparent;
-    }
-
-    .card:hover {
-      border-color: var(--accent);
-      box-shadow: 0 -2px 0 0 var(--accent), 0 4px 16px rgba(var(--accent-rgb), .1);
-      transform: translateY(-2px);
-    }
-
     /* Compare winner bar — glow */
     .cmp-stat-fill.winner {
       background: var(--accent2);
@@ -4626,14 +4629,9 @@
       pointer-events: none;
     }
 
-    /* List view overall score — use gradient text */
-    .lrow-overall {
-      background: linear-gradient(135deg, var(--rank1), var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
+    /* List view overall score — gradient text now declared in the single
+       .lrow-overall rule above (was previously split across two separate
+       declarations of the same selector, ~280 lines apart) */
 
     /* ── UNIFIED IMAGE MANAGER ── */
     #img-add-row {

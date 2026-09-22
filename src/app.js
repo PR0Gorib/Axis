@@ -1965,7 +1965,14 @@
     // section stays hidden entirely rather than showing a flat dot.
     function renderPanelHistoryChart(item) {
       const section = document.getElementById('panel-history-section');
-      const history = item.scoreHistory || [];
+      // Defensively sorted here rather than trusted from storage — normal
+      // edits append in order and mergeItemStats() already sorts before
+      // saving, but a system clock change between two edits (timezone/DST
+      // adjustment, manual date change) could in theory produce an
+      // out-of-order timestamp from an otherwise ordinary edit, and the
+      // axis math below assumes history[0] is earliest / history[last] is
+      // latest.
+      const history = (item.scoreHistory || []).slice().sort((a, b) => a.t - b.t);
       if (history.length < 2) {
         section.classList.remove('has-data');
         return;
@@ -2656,6 +2663,20 @@
         if (item.stats && oldName in item.stats) {
           item.stats[trimmed] = item.stats[oldName];
           delete item.stats[oldName];
+        }
+        // Also rename inside every recorded history point's stats snapshot
+        // — otherwise a renamed category's OLD history becomes permanently
+        // orphaned under a name nothing displays under anymore (the chart
+        // only looks up the CURRENT category name), silently truncating
+        // the visible timeline to "since the rename" instead of showing
+        // the item's real full history.
+        if (Array.isArray(item.scoreHistory)) {
+          item.scoreHistory.forEach(point => {
+            if (point.stats && oldName in point.stats) {
+              point.stats[trimmed] = point.stats[oldName];
+              delete point.stats[oldName];
+            }
+          });
         }
       });
       // fix active sort
